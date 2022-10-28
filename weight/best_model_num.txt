@@ -1,1 +1,1 @@
-best_epoch_num:2
+best_epoch_num:1

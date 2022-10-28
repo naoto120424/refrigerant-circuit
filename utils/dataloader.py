@@ -29,35 +29,37 @@ def load_data(look_back=20):
     data_path='../mazda/dataset/' 
     csv_files = os.listdir(data_path)
     csv_files.sort()
-    
-    data={}
-    Xdata=[]
-    Specdata=[]
-    Ydata=[]
-    data_name_list=[]
-    for file in tqdm(csv_files, position=0, dynamic_ncols=True):
-        data_name_list.append(file[-12:-4])
-        csv_data=pd.read_csv(os.path.join(data_path, file),skiprows=1).values
-        single_data=decimate(csv_data)[:,1:]
-        spec_data=single_data[:,:9]
-        output_data=single_data[:,9:]
+
+    data = {}
+    Xdata = []
+    Specdata = []
+    Ydata = []
+    for file in tqdm(csv_files):
+        csv_data = pd.read_csv(os.path.join(
+            data_path, file), skiprows=1).values
+        single_data = decimate(csv_data)[:, 1:]
+        spec_data = single_data[:, :9]
+        output_data = single_data[:, 9:]
         input_time_list = []
         spec_list = []
         gt_list = []
-        for t in range(single_data.shape[0]-look_back): # data.shape[0]=1199
+        for t in range(single_data.shape[0]-look_back):  # data.shape[0]=1199
             input_time_list.append(single_data[t:t+look_back])
             spec_list.append(spec_data[t+look_back])
             gt_list.append(output_data[t+look_back])
         Xdata.append(np.array(input_time_list))
         Specdata.append(np.array(spec_list))
         Ydata.append(np.array(gt_list))
-    data['inp']=np.array(Xdata)
-    data['spec']=np.array(Specdata)
-    data['gt']=np.array(Ydata)
-    data['data_name']=data_name_list
+    data['inp'] = np.array(Xdata)     # shape(case_num, 1179, 20, 39)
+    data['spec'] = np.array(Specdata)  # shape(case_num, 1179, 9)
+    data['gt'] = np.array(Ydata)      # shape(case_num, 1179, 30)
     # print(data['inp'].shape)
     # print(data['spec'].shape)
     # print(data['gt'].shape)
+    data['feature_name'] = list(map(lambda x: x.split('.')[0], pd.read_csv(
+        os.path.join(data_path, csv_files[0]), skiprows=0).columns.values))
+    data['feature_unit'] = list(map(lambda x: x.split('.')[0], pd.read_csv(
+        os.path.join(data_path, csv_files[0]), skiprows=1).columns.values))
     return data
 
 # 訓練データから標準化用の平均と標準偏差を求める関数

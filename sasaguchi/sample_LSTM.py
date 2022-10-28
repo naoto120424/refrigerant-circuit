@@ -209,7 +209,7 @@ def main():
     mlflow.log_artifacts(local_dir=result_path, artifact_path='result')
     # mlflow上に保存するので削除する
     shutil.rmtree(result_path)
-    mlflow.end_run()
+    mlflow.end_run() 
 
 
 if __name__ == '__main__':

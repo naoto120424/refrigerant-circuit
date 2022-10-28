@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/naotonaka/Library/CloudStorage/OneDrive-HiroshimaUniversity/step1_Eva_dataset/mazda/mlruns/0/9074e63d8adc4a91a6a3409dec93b1a5/artifacts
+end_time: 1666945805249
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 9074e63d8adc4a91a6a3409dec93b1a5
+run_name: capable-auk-759
+run_uuid: 9074e63d8adc4a91a6a3409dec93b1a5
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1666945804992
+status: 3
+tags: []
+user_id: naotonaka
