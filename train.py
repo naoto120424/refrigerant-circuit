@@ -5,7 +5,7 @@ import numpy as np
 from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
-
+import mlflow
 
 def main():
     seed = 42
@@ -13,12 +13,12 @@ def main():
     batch_size = 20
     look_back = 20
 
-    seed_everything(seed)
+    seed_everything(seed=seed)
 
     device = deviceChecker()
     print(f'using {device} device\n')
 
-    data = load_data(look_back=20)
+    data = load_data(look_back=look_back)
 
     train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
@@ -36,7 +36,6 @@ def main():
     criterion = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
-
     best_loss = 100.0
     best_epoch_num = 0
     print('\ntrain start')
