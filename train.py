@@ -11,9 +11,16 @@ import shutil
 
 def main():
     seed = 42
-    epoch_num = 1
+    epoch_num = 2
     batch_size = 20
     look_back = 20
+
+    mlflow.set_tracking_uri('../mazda/mlflow_experiment')
+    mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
+    mlflow.start_run()
+    mlflow.log_param("seed", seed)
+    mlflow.log_param("batch size", batch_size)
+    mlflow.log_param("look back size", look_back)
 
     seed_everything(seed=seed)
 
@@ -28,11 +35,11 @@ def main():
     print("\ncreating dataset and normalisation now...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
-    test_dataset, _, _ = create_dataset(data, test_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
+    # test_dataset, _, _ = create_dataset(data, test_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    # test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     model = LSTMClassifier().to(device)
     criterion = nn.MSELoss()
@@ -52,12 +59,12 @@ def main():
             gt = batch['gt'].to(device)
 
             pred = model(inp, spec)
-
             loss = criterion(pred, gt)
             loss.backward()
             epoch_loss += loss.item() * inp.size(0)
             optimizer.step()
         epoch_loss = epoch_loss / len(train_dataloader)
+        mlflow.log_metric(f'train loss', epoch_loss, step=epoch)
 
         with torch.no_grad():
             model.eval()
@@ -68,33 +75,31 @@ def main():
                 gt = batch['gt'].to(device)
                 
                 pred = model(inp, spec)
-
                 test_error = torch.mean(torch.abs(gt - pred))
-                
                 epoch_test_error += test_error.item() * inp.size(0)
             
             epoch_test_error = epoch_test_error / len(val_dataloader)
             print(f'train Loss: {epoch_loss}, val Loss: {epoch_test_error}')
             mlflow.log_metric(f'val loss', epoch_test_error, step=epoch)
 
+        result_path = os.path.join('..', 'mazda', 'result')
+        os.makedirs(result_path, exist_ok=True)
+
         if(epoch_test_error < best_loss):
             best_epoch_num = epoch
             best_loss = epoch_test_error
             print('This is the best model. Save to "best_model.pth".')
-            model_path = os.path.join('weight', 'best_model.pth')
+            model_path = os.path.join('result', 'best_model.pth')
             torch.save(model.state_dict(), model_path)
     mlflow.log_metric('best epoch num', best_epoch_num)
 
     print('------------------------------------\n')
-    print('------------------------------------')
-    print("test start")
 
-    result_path = os.path.join('..', 'result')
     with torch.no_grad():
-        model_path = 'best_model.pth'
+        print("test start")
+        print('------------------------------------')
         model.load_state_dict(torch.load(model_path))
         model.eval()
-        os.makedirs(result_path, exist_ok=True)
         for test_index in tqdm(test_index_list):
             case_name = f'case{str(test_index+1).zfill(4)}'
             # print(case_name)
@@ -155,6 +160,7 @@ def main():
                 ax.set_ylabel(f'{output_feature_name[i]}[{output_feature_unit[i]}]')
                 ax.legend(loc='best')
                 plt.savefig(os.path.join(case_path, f'{output_feature_name[i]}.png'))
+                plt.close()
     
     mlflow.log_artifacts(local_dir=result_path, artifact_path='result')
     # mlflow上に保存するので削除する

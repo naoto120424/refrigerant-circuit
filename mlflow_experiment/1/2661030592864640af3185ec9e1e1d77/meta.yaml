@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/1/2661030592864640af3185ec9e1e1d77/artifacts
+end_time: 1666973832921
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 2661030592864640af3185ec9e1e1d77
+run_name: thoughtful-shark-813
+run_uuid: 2661030592864640af3185ec9e1e1d77
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1666973591782
+status: 3
+tags: []
+user_id: naotonaka

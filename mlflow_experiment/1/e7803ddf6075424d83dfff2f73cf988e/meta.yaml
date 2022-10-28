@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/1/e7803ddf6075424d83dfff2f73cf988e/artifacts
+end_time: 1666973235739
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: e7803ddf6075424d83dfff2f73cf988e
+run_name: funny-owl-454
+run_uuid: e7803ddf6075424d83dfff2f73cf988e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1666973071209
+status: 3
+tags: []
+user_id: naotonaka
