@@ -53,11 +53,11 @@ def deviceChecker():
 
 def main():
     seed = 42
-    epoch_num = 500
-    batch_size = 64
-    look_back = 40
+    epoch_num = 2 # 500
+    batch_size = 20
+    look_back = 20
     
-    mlflow.set_tracking_uri('/home/sasasho/researchment/refrigerant-circuit/mlfow_experiment')
+    mlflow.set_tracking_uri('../sasaguchi/mlfow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
     mlflow.start_run()
     mlflow.log_param("seed", seed)
@@ -86,7 +86,7 @@ def main():
 
     # Prepare for training
     model = LSTMClassifier().to(device)
-    criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
     best_loss = 100.0

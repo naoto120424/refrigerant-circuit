@@ -24,7 +24,7 @@ def decimate(data):
 
 # 全データをロードする関数
 def load_data(look_back=20):
-    data_path='/home/sasasho/researchment/dataset/refrigerant-circuit/input' 
+    data_path='../mazda/dataset' 
     csv_files = os.listdir(data_path)
     csv_files.sort()
     
@@ -59,7 +59,7 @@ def load_data(look_back=20):
 
 # 訓練データから標準化用の平均と標準偏差を求める関数
 def find_meanstd(train_index_list):
-    data_path='/home/sasasho/researchment/dataset/refrigerant-circuit/input'  # 任意のパス
+    data_path = '../mazda/dataset'  # 任意のパス
     csv_files = os.listdir(data_path)
     csv_files.sort()
     train_csv_files = []

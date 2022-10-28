@@ -8,8 +8,13 @@ from sklearn.model_selection import train_test_split
 
 
 def main():
-    seed_everything()
+    seed = 42
     epoch_num = 2
+    batch_size = 20
+    look_back = 20
+
+    seed_everything(seed)
+
     device = deviceChecker()
     print(f'using {device} device\n')
 
