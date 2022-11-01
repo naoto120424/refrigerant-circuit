@@ -11,12 +11,12 @@ import shutil
 
 def main():
     seed = 42
-    epoch_num = 100
+    epoch_num = 1000
     batch_size = 64
     look_back = 20
 
     mlflow.set_tracking_uri('../mazda/mlflow_experiment')
-    mlflow.set_experiment('Mazda Refrigerant Circuit')
+    mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
     mlflow.start_run()
     mlflow.log_param("seed", seed)
     mlflow.log_param("batch size", batch_size)

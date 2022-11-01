@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/1/28c82e6c7f904630847de81ec47b0a9b/artifacts
+end_time: 1667301630278
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 28c82e6c7f904630847de81ec47b0a9b
+run_name: indecisive-bird-49
+run_uuid: 28c82e6c7f904630847de81ec47b0a9b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1667294561905
+status: 3
+tags: []
+user_id: naoto

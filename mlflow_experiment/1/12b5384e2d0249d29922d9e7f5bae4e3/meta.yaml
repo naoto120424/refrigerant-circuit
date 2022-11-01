@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/1/12b5384e2d0249d29922d9e7f5bae4e3/artifacts
+end_time: 1667294484258
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 12b5384e2d0249d29922d9e7f5bae4e3
+run_name: wise-sloth-112
+run_uuid: 12b5384e2d0249d29922d9e7f5bae4e3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1667291609319
+status: 3
+tags: []
+user_id: naoto
