@@ -1,17 +1,17 @@
 import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 import numpy as np
+import mlflow
+import shutil
 from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
-import mlflow
-import shutil
 
 def main():
     seed = 42
-    epoch_num = 2
+    epoch_num = 10
     batch_size = 20
     look_back = 20
 
@@ -35,11 +35,9 @@ def main():
     print("\ncreating dataset and normalisation now...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
-    # test_dataset, _, _ = create_dataset(data, test_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    # test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     model = LSTMClassifier().to(device)
     criterion = nn.MSELoss()
@@ -52,7 +50,7 @@ def main():
         print(f'Epoch {epoch}/{epoch_num}')
         model.train()
         epoch_loss = 0.0
-        for batch in tqdm(train_dataloader, position=0, dynamic_ncols=True):
+        for batch in tqdm(train_dataloader):
             optimizer.zero_grad()
             inp = batch['inp'].to(device)
             spec = batch['spec'].to(device)
@@ -69,7 +67,7 @@ def main():
         with torch.no_grad():
             model.eval()
             epoch_test_error = 0
-            for batch in tqdm(val_dataloader, position=0, dynamic_ncols=True):
+            for batch in tqdm(val_dataloader):
                 inp = batch['inp'].to(device)
                 spec = batch['spec'].to(device)
                 gt = batch['gt'].to(device)
@@ -89,9 +87,9 @@ def main():
             best_epoch_num = epoch
             best_loss = epoch_test_error
             print('This is the best model. Save to "best_model.pth".')
-            model_path = os.path.join('result', 'best_model.pth')
+            model_path = os.path.join(result_path, 'best_model.pth')
             torch.save(model.state_dict(), model_path)
-    mlflow.log_metric('best epoch num', best_epoch_num)
+    mlflow.log_metric(f'best epoch num', best_epoch_num)
 
     print('------------------------------------\n')
 
@@ -103,7 +101,7 @@ def main():
         for test_index in tqdm(test_index_list):
             case_name = f'case{str(test_index+1).zfill(4)}'
             # print(case_name)
-            case_path = os.path.join(result_path, case_name)
+            case_path = os.path.join(result_path, 'img', case_name)
             os.makedirs(case_path, exist_ok=True)
             inp_data = data['inp'][test_index]
             spec_data = data['spec'][test_index]

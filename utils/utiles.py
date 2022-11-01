@@ -14,7 +14,7 @@ class CFG:
     FOLD_NUM = 5
 
 def make_experiment_id_and_path():
-    experiment_path = '../experiment'
+    experiment_path = '../result'
     dir_list = os.listdir(experiment_path)
     prev_experiment_id = max([int(x) for x in dir_list])
     current_experiment_id = prev_experiment_id + 1
