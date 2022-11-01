@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/1/5d3f2741e24c400ca6650e1ebb76dee4/artifacts
+end_time: 1667278234212
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 5d3f2741e24c400ca6650e1ebb76dee4
+run_name: puzzled-grouse-905
+run_uuid: 5d3f2741e24c400ca6650e1ebb76dee4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1667278146684
+status: 3
+tags: []
+user_id: naoto

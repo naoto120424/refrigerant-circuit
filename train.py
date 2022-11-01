@@ -16,7 +16,7 @@ def main():
     look_back = 20
 
     mlflow.set_tracking_uri('../mazda/mlflow_experiment')
-    mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
+    mlflow.set_experiment('Mazda Refrigerant Circuit')
     mlflow.start_run()
     mlflow.log_param("seed", seed)
     mlflow.log_param("batch size", batch_size)
@@ -24,7 +24,7 @@ def main():
 
     seed_everything(seed=seed)
 
-    device = deviceChecker()
+    device = 'cuda' # deviceChecker()
     print(f'using {device} device\n')
 
     data = load_data(look_back=look_back)
