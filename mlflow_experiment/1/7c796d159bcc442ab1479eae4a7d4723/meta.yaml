@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/1/7c796d159bcc442ab1479eae4a7d4723/artifacts
+end_time: 1667309890038
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 7c796d159bcc442ab1479eae4a7d4723
+run_name: efficient-sponge-690
+run_uuid: 7c796d159bcc442ab1479eae4a7d4723
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1667302707976
+status: 3
+tags: []
+user_id: naoto

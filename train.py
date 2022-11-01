@@ -29,7 +29,7 @@ def main():
 
     data = load_data(look_back=look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(1, 100), test_size=10)
+    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
 
     print("\ncreating dataset and normalisation now...")
