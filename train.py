@@ -11,8 +11,8 @@ import shutil
 
 def main():
     seed = 42
-    epoch_num = 2
-    batch_size = 20
+    epoch_num = 100
+    batch_size = 64
     look_back = 20
 
     mlflow.set_tracking_uri('../mazda/mlflow_experiment')
@@ -29,20 +29,18 @@ def main():
 
     data = load_data(look_back=look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
+    train_index_list, test_index_list = train_test_split(np.arange(1, 100), test_size=10)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
 
     print("\ncreating dataset and normalisation now...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
-    # test_dataset, _, _ = create_dataset(data, test_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    # test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
     model = LSTMClassifier().to(device)
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
     best_loss = 100.0
@@ -52,7 +50,7 @@ def main():
         print(f'Epoch {epoch}/{epoch_num}')
         model.train()
         epoch_loss = 0.0
-        for batch in tqdm(train_dataloader, position=0, dynamic_ncols=True):
+        for batch in tqdm(train_dataloader):
             optimizer.zero_grad()
             inp = batch['inp'].to(device)
             spec = batch['spec'].to(device)
@@ -69,7 +67,7 @@ def main():
         with torch.no_grad():
             model.eval()
             epoch_test_error = 0
-            for batch in tqdm(val_dataloader, position=0, dynamic_ncols=True):
+            for batch in tqdm(val_dataloader):
                 inp = batch['inp'].to(device)
                 spec = batch['spec'].to(device)
                 gt = batch['gt'].to(device)
@@ -108,39 +106,26 @@ def main():
             inp_data = data['inp'][test_index]
             spec_data = data['spec'][test_index]
             gt_data = data['gt'][test_index]
-            # print("inp_data.shape", inp_data.shape)
-            # print("spec_data.shape", spec_data.shape)
-            # print("gt_data.shape", gt_data.shape)
 
-            # 標準化処理
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
             for i in range(scaling_input_data.shape[1]):
                 scaling_input_data[:,i] = (scaling_input_data[:,i]-mean_list[i])/std_list[i]
             for i in range(scaling_spec_data.shape[1]):
                 scaling_spec_data[:,i] = (scaling_spec_data[:,i]-mean_list[i])/std_list[i]
-            # for i in range(scaling_gt_data.shape[1]):
-            #     scaling_gt_data[:,i] = (scaling_gt_data[:,i]-mean_list[i+scaling_spec_data.shape[1]])/std_list[i+scaling_spec_data.shape[1]]
 
             for i in range(scaling_spec_data.shape[0]):
                 input = torch.from_numpy(scaling_input_data[i:i+look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
-                # print(input.shape)
-                # print(spec.shape)
                 scaling_pred_data = model(input, spec).detach().to('cpu').numpy().copy()[0]
-                # print("scaling_pred_data", scaling_pred_data.shape)
                 new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
-                # print("new_scaling_data", new_scaling_input_data.shape)
                 scaling_input_data = np.concatenate([scaling_input_data, new_scaling_input_data], axis=0)
-                # print("scaling_input_data", scaling_input_data.shape)
 
-            # 標準化をもとに戻す処理
             pred_data = scaling_input_data.copy()
             for i in range(scaling_input_data.shape[1]):
                 pred_data[:,i] = pred_data[:,i] * std_list[i] + mean_list[i]
             pred_output_data = pred_data[:,9:]
 
-            # gtの出力を作成
             output_feature_name = data['feature_name'][10:]
             output_feature_unit = data['feature_unit'][10:]
             gt_output_data = []
@@ -149,7 +134,6 @@ def main():
             for gt in gt_data:
                 gt_output_data.append(gt)
 
-            # 波形の出力
             for i in range(len(output_feature_name)):
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
@@ -163,7 +147,6 @@ def main():
                 plt.close()
     
     mlflow.log_artifacts(local_dir=result_path, artifact_path='result')
-    # mlflow上に保存するので削除する
     shutil.rmtree(result_path)
     mlflow.end_run() 
 

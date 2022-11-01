@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/2/3cafe4f6a31042a992204da857e933ff/artifacts
+end_time: 1667281164579
+entry_point_name: ''
+experiment_id: '2'
+lifecycle_stage: active
+run_id: 3cafe4f6a31042a992204da857e933ff
+run_name: loud-skink-291
+run_uuid: 3cafe4f6a31042a992204da857e933ff
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1667280937973
+status: 3
+tags: []
+user_id: naoto
