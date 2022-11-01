@@ -24,7 +24,7 @@ def main():
 
     seed_everything(seed=seed)
 
-    device = 'cuda' # deviceChecker()
+    device = deviceChecker()
     print(f'using {device} device\n')
 
     data = load_data(look_back=look_back)

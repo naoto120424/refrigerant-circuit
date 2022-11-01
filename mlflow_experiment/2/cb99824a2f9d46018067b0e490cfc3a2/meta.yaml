@@ -1,0 +1,15 @@
+artifact_uri: ../mazda/mlflow_experiment/2/cb99824a2f9d46018067b0e490cfc3a2/artifacts
+end_time: 1667280290754
+entry_point_name: ''
+experiment_id: '2'
+lifecycle_stage: active
+run_id: cb99824a2f9d46018067b0e490cfc3a2
+run_name: bedecked-moose-615
+run_uuid: cb99824a2f9d46018067b0e490cfc3a2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1667280197002
+status: 3
+tags: []
+user_id: naoto
