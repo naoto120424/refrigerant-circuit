@@ -100,7 +100,6 @@ def main():
         model.eval()
         for test_index in tqdm(test_index_list):
             case_name = f'case{str(test_index+1).zfill(4)}'
-            # print(case_name)
             case_path = os.path.join(result_path, case_name)
             os.makedirs(case_path, exist_ok=True)
             inp_data = data['inp'][test_index]
