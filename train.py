@@ -11,11 +11,11 @@ from sklearn.model_selection import train_test_split
 
 def main():
     seed = 42
-    epoch_num = 10
+    epoch_num = 1000
     batch_size = 64
-    look_back = 30
+    look_back = 50
 
-    mlflow.set_tracking_uri('../result/mlflow_experiment')
+    mlflow.set_tracking_uri('../mlflow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
     mlflow.start_run()
     mlflow.log_param("seed", seed)
@@ -30,8 +30,8 @@ def main():
 
     data = load_data(look_back=look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
-    train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
+    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=5)
+    train_index_list, val_index_list = train_test_split(train_index_list,test_size=5)
 
     print("\ncreating dataset and normalisation now...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
@@ -102,7 +102,6 @@ def main():
         for test_index in tqdm(test_index_list):
             case_name = f'case{str(test_index+1).zfill(4)}'
             case_path = os.path.join(result_path, 'img', case_name)
-            case_path = os.path.join(result_path, case_name)
             os.makedirs(case_path, exist_ok=True)
             inp_data = data['inp'][test_index]
             spec_data = data['spec'][test_index]
