@@ -15,12 +15,13 @@ def main():
     batch_size = 20
     epoch_num = 1000
     batch_size = 64
-    look_back = 20
+    look_back = 30
 
     mlflow.set_tracking_uri('../mazda/mlflow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
     mlflow.start_run()
     mlflow.log_param("seed", seed)
+    mlflow.log_param("epoch num", epoch_num)
     mlflow.log_param("batch size", batch_size)
     mlflow.log_param("look back size", look_back)
 
