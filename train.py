@@ -11,13 +11,10 @@ from sklearn.model_selection import train_test_split
 
 def main():
     seed = 42
-<<<<<<< HEAD
     epoch_num = 10
     batch_size = 20
-=======
     epoch_num = 1000
     batch_size = 64
->>>>>>> 8e6e6883c22bc637b2fa9763c2d992d8363493da
     look_back = 20
 
     mlflow.set_tracking_uri('../mazda/mlflow_experiment')
@@ -105,12 +102,8 @@ def main():
         model.eval()
         for test_index in tqdm(test_index_list):
             case_name = f'case{str(test_index+1).zfill(4)}'
-<<<<<<< HEAD
-            # print(case_name)
             case_path = os.path.join(result_path, 'img', case_name)
-=======
             case_path = os.path.join(result_path, case_name)
->>>>>>> 8e6e6883c22bc637b2fa9763c2d992d8363493da
             os.makedirs(case_path, exist_ok=True)
             inp_data = data['inp'][test_index]
             spec_data = data['spec'][test_index]
