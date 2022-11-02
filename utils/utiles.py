@@ -14,9 +14,7 @@ class CFG:
     
 
 def deviceChecker():
-    if torch.backends.mps.is_available():
-        return "mps"
-    elif torch.cuda.is_available():
+    if torch.cuda.is_available():
         return "cuda"
     else:
         return "cpu"
