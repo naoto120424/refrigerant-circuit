@@ -17,7 +17,7 @@ def main():
     batch_size = 64
     look_back = 30
 
-    mlflow.set_tracking_uri('../mazda/mlflow_experiment')
+    mlflow.set_tracking_uri('../result/mlflow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
     mlflow.start_run()
     mlflow.log_param("seed", seed)
@@ -83,7 +83,7 @@ def main():
             print(f'train Loss: {epoch_loss}, val Loss: {epoch_test_error}')
             mlflow.log_metric(f'val loss', epoch_test_error, step=epoch)
 
-        result_path = os.path.join('..', 'mazda', 'result')
+        result_path = os.path.join('..', 'result')
         os.makedirs(result_path, exist_ok=True)
 
         if(epoch_test_error < best_loss):

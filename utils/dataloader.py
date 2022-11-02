@@ -1,4 +1,3 @@
-from statistics import mean
 import torch
 from torch.utils.data import Dataset
 import numpy as np
@@ -26,7 +25,7 @@ def decimate(data):
 # 全データをロードする関数
 def load_data(look_back=20):
     print('loading data...')
-    data_path='../mazda/dataset/' 
+    data_path='../dataset/' 
     csv_files = os.listdir(data_path)
     csv_files.sort()
 
@@ -64,7 +63,7 @@ def load_data(look_back=20):
 
 # 訓練データから標準化用の平均と標準偏差を求める関数
 def find_meanstd(train_index_list):
-    data_path='../mazda/dataset/'  # 任意のパス
+    data_path='../dataset/'  # 任意のパス
     csv_files = os.listdir(data_path)
     csv_files.sort()
     train_csv_files = []
