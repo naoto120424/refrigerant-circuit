@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 
 def main():
     seed = 42
-    epoch_num = 1000
+    epoch_num = 1500
     batch_size = 64
     look_back = 50
 
