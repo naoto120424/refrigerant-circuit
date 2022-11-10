@@ -2,7 +2,7 @@
 
 How to use "mlflow ui"
 ```
-mlflow ui --backend-store-uri ../result/mlflow_experiment
+mlflow ui --backend-store-uri ../mlflow_experiment
 ```
 
 git key
