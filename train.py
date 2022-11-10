@@ -16,7 +16,7 @@ def main():
     seed = 42
     epoch_num = 3 # 1500
     batch_size = 64
-    look_back = 50
+    look_back = 20
 
     mlflow.set_tracking_uri('../mlflow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
