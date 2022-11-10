@@ -44,7 +44,7 @@ def main():
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     model = LSTMClassifier().to(device)
-    criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
     best_loss = 100.0
@@ -141,10 +141,10 @@ def main():
                 if output_feature_name[i] in target_kW:
                     mse = mean_squared_error(np.array(gt_output_data)[:,i], np.array(pred_output_data)[:,i])
                     mae = mean_absolute_error(np.array(gt_output_data)[:,i], np.array(pred_output_data)[:,i])
-                    # fde = abs(gt_output_data[-1,i] - pred_output_data[-1,i])
+                    fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
                     mlflow.log_metric(f'mse', mse)
                     mlflow.log_metric(f'mae', mae)
-                    # mlflow.log_metric(f'fde', fde)
+                    mlflow.log_metric(f'fde', fde)
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
                 ax.plot(np.array(gt_output_data)[:,i], color='#e46409', label='gt')
