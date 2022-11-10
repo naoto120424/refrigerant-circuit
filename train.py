@@ -15,8 +15,8 @@ def main():
     target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
     seed = 42
     epoch_num = 3 # 1500
-    batch_size = 20
-    look_back = 20
+    batch_size = 64
+    look_back = 50
 
     mlflow.set_tracking_uri('../mlflow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
@@ -44,7 +44,7 @@ def main():
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     model = LSTMClassifier().to(device)
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
     best_loss = 100.0
