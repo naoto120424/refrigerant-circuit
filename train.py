@@ -15,7 +15,7 @@ def main():
     target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
     seed = 42
     epoch_num = 3 # 1500
-    batch_size = 64
+    batch_size = 20
     look_back = 20
 
     mlflow.set_tracking_uri('../mlflow_experiment')
