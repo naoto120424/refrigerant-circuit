@@ -20,15 +20,22 @@ def main():
     parser.add_argument('--bs',type=int,default=128)
     parser.add_argument('--epoch',type=int,default=500)
     parser.add_argument('--look_back',type=int,default=40)
+    parser.add_argument('--debug', type=bool, default=False)
     args=parser.parse_args()
 
+    if args.debug:
+        epoch_num = 3
+    else:
+        epoch_num = args.epoch
+
     mlflow.set_tracking_uri('../mlflow_experiment')
-    mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
+    mlflow.set_experiment(args.e_name)
     mlflow.start_run()
     mlflow.log_param("seed", args.seed)
-    mlflow.log_param("epoch num", args.epoch)
+    mlflow.log_param("epoch num", epoch_num)
     mlflow.log_param("batch size", args.bs)
     mlflow.log_param("look back size", args.look_back)
+    mlflow.log_param("debug", args.debug)
 
     seed_everything(seed=args.seed)
 
@@ -44,7 +51,7 @@ def main():
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
 
     # model = LSTMClassifier().to(device)
@@ -55,9 +62,9 @@ def main():
     
     best_loss = 100.0
     print('\ntrain start')
-    for epoch in range(1, args.epoch + 1):
+    for epoch in range(1, epoch_num + 1):
         print('------------------------------------')
-        print(f'Epoch {epoch}/{args.epoch}')
+        print(f'Epoch {epoch}/{epoch_num}')
         model.train()
         epoch_loss = 0.0
         for batch in tqdm(train_dataloader):
