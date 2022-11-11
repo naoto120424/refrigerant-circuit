@@ -44,14 +44,14 @@ def main():
     seed_everything(seed=args.seed)
 
     device = deviceChecker()
-    print(f'using {device} device\n')
+    print(f'device: {device}')
 
     data = load_data(look_back=args.look_back)
 
     train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
 
-    print("\ncreating dataset and normalisation now...")
+    print("creating dataset and normalisation...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
@@ -187,7 +187,9 @@ def main():
     
     mlflow.log_artifacts(local_dir=result_path, artifact_path='result')
     shutil.rmtree(result_path)
-    mlflow.end_run() 
+    mlflow.end_run()
+    print('------------------------------------')
+    print("experiment end")
 
 if __name__ == '__main__':
     main()

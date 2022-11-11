@@ -33,7 +33,7 @@ def load_data(look_back=20):
     Xdata = []
     Specdata = []
     Ydata = []
-    for file in tqdm(csv_files):
+    for file in csv_files:
         csv_data = pd.read_csv(os.path.join(
             data_path, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
