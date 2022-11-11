@@ -21,6 +21,8 @@ def main():
     parser.add_argument('--epoch',type=int,default=500)
     parser.add_argument('--look_back',type=int,default=40)
     parser.add_argument('--debug', type=bool, default=False)
+    parser.add_argument('--model', type=str, default="BaseTransformer")
+    parser.add_argument('--criterion', type=str, default="mse")
     args=parser.parse_args()
 
     if args.debug:
@@ -36,6 +38,8 @@ def main():
     mlflow.log_param("batch size", args.bs)
     mlflow.log_param("look back size", args.look_back)
     mlflow.log_param("debug", args.debug)
+    mlflow.log_param("model", args.model)
+    mlflow.log_param("criterion", args.criterion)
 
     seed_everything(seed=args.seed)
 
@@ -54,10 +58,22 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
 
-    # model = LSTMClassifier().to(device)
-    model = BaseTransformer(args.look_back).to(device)
-    mlflow.log_param("model", model.name)
-    criterion = nn.L1Loss()
+    if args.model in model_list:
+        model = model_list[args.model]
+    elif args.model == "BaseTransformer":
+        model = BaseTransformer(look_back=args.look_back)
+    else:
+        print("unknown model name")
+        return
+
+    model.to(device)
+    
+    if args.criterion in criterion_list:
+        criterion = criterion_list[args.criterion]
+    else:
+        print("unknown criterion name")
+        return
+
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
     best_loss = 100.0

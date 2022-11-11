@@ -108,8 +108,7 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    name = "BaseTransformer"
-    def __init__(self, look_back, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, look_back=50, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
         self.num_all_features = 39

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 class LSTMClassifier(nn.Module):
-    name = "LSTM"
     def __init__(self, input_dim=39, num_hidden_units=256, spec_dim=9, output_dim=30):
         super(LSTMClassifier, self).__init__()
         self.input_dim = input_dim
