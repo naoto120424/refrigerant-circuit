@@ -2,8 +2,8 @@ import torch
 import random
 import os
 import numpy as np
-from model.lstm import *
 
+target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
 
 class CFG:
     EPOCH = 200
