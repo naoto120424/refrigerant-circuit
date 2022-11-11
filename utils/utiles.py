@@ -5,14 +5,6 @@ import numpy as np
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
 
-class CFG:
-    EPOCH = 200
-    LR = 1e-4
-    WEIGHT_DECAY = 1e-3
-    DATA_DIR = '../dataset/'
-    FOLD_NUM = 5
-    
-
 def deviceChecker():
     if torch.backends.mps.is_available():
         return "mps"
