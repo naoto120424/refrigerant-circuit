@@ -14,7 +14,7 @@ from math import sqrt
 def main():
     target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
     seed = 42
-    epoch_num = 3 # 1500
+    epoch_num = 500
     batch_size = 64
     look_back = 50
 
@@ -33,8 +33,8 @@ def main():
 
     data = load_data(look_back=look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=5)
-    train_index_list, val_index_list = train_test_split(train_index_list,test_size=5)
+    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
+    train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
 
     print("\ncreating dataset and normalisation now...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
@@ -142,9 +142,9 @@ def main():
                     mse = mean_squared_error(np.array(gt_output_data)[:,i], np.array(pred_output_data)[:,i])
                     mae = mean_absolute_error(np.array(gt_output_data)[:,i], np.array(pred_output_data)[:,i])
                     fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
-                    mlflow.log_metric(f'mse', mse)
-                    mlflow.log_metric(f'mae', mae)
-                    mlflow.log_metric(f'fde', fde)
+                    mlflow.log_metric(f'mse_' + output_feature_name[i] + f'_' + case_name, mse)
+                    mlflow.log_metric(f'mae_' + output_feature_name[i] + f'_' + case_name, mae)
+                    mlflow.log_metric(f'fde_' + output_feature_name[i] + f'_' + case_name, fde)
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
                 ax.plot(np.array(gt_output_data)[:,i], color='#e46409', label='gt')
