@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-
 class LSTMClassifier(nn.Module):
+    name = "LSTM"
     def __init__(self, input_dim=39, num_hidden_units=256, spec_dim=9, output_dim=30):
         super(LSTMClassifier, self).__init__()
         self.input_dim = input_dim
@@ -16,12 +16,12 @@ class LSTMClassifier(nn.Module):
         self.spec_dense = nn.Linear(spec_dim, num_hidden_units)
         self.predicter = nn.Sequential(
             nn.Linear(num_hidden_units*2, num_hidden_units),
+            nn.ReLU(inplace=True),
             nn.Linear(num_hidden_units, output_dim)
         )
 
     def forward(self, x, spec, h=None):
         hidden1, _ = self.lstm(x, h)
         hidden2 = self.spec_dense(spec)
-        # 最後のセルだけを取り出している
-        y = self.predicter(torch.cat([hidden1[:, -1, :], hidden2], dim=1))
+        y = self.predicter(torch.cat([hidden1[:, -1, :], hidden2], dim=1)) # 最後のセルだけを取り出している
         return y
