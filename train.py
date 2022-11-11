@@ -5,33 +5,37 @@ import matplotlib.pyplot as plt
 import numpy as np
 import mlflow
 import shutil
+import argparse
 from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from math import sqrt
+from model.lstm import LSTMClassifier
+from model.base_transformer import BaseTransformer
 
 def main():
-    target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
-    seed = 42
-    epoch_num = 500
-    batch_size = 64
-    look_back = 50
+    parser=argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
+    parser.add_argument('--e_name',type=str,default='Mazda Refrigerant Circuit Turtrial')
+    parser.add_argument('--seed',type=int,default=42)
+    parser.add_argument('--bs',type=int,default=128)
+    parser.add_argument('--epoch',type=int,default=500)
+    parser.add_argument('--look_back',type=int,default=40)
+    args=parser.parse_args()
 
     mlflow.set_tracking_uri('../mlflow_experiment')
     mlflow.set_experiment('Mazda Refrigerant Circuit Turtrial')
     mlflow.start_run()
-    mlflow.log_param("seed", seed)
-    mlflow.log_param("epoch num", epoch_num)
-    mlflow.log_param("batch size", batch_size)
-    mlflow.log_param("look back size", look_back)
+    mlflow.log_param("seed", args.seed)
+    mlflow.log_param("epoch num", args.epoch)
+    mlflow.log_param("batch size", args.bs)
+    mlflow.log_param("look back size", args.look_back)
 
-    seed_everything(seed=seed)
+    seed_everything(seed=args.seed)
 
     device = deviceChecker()
     print(f'using {device} device\n')
 
-    data = load_data(look_back=look_back)
+    data = load_data(look_back=args.look_back)
 
     train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
@@ -40,18 +44,20 @@ def main():
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
 
-    model = LSTMClassifier().to(device)
+    # model = LSTMClassifier().to(device)
+    model = BaseTransformer(args.look_back).to(device)
+    mlflow.log_param("model", model.name)
     criterion = nn.L1Loss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
     best_loss = 100.0
     print('\ntrain start')
-    for epoch in range(1, epoch_num + 1):
+    for epoch in range(1, args.epoch + 1):
         print('------------------------------------')
-        print(f'Epoch {epoch}/{epoch_num}')
+        print(f'Epoch {epoch}/{args.epoch}')
         model.train()
         epoch_loss = 0.0
         for batch in tqdm(train_dataloader):
@@ -118,7 +124,7 @@ def main():
                 scaling_spec_data[:,i] = (scaling_spec_data[:,i]-mean_list[i])/std_list[i]
 
             for i in range(scaling_spec_data.shape[0]):
-                input = torch.from_numpy(scaling_input_data[i:i+look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
+                input = torch.from_numpy(scaling_input_data[i:i+args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 scaling_pred_data = model(input, spec).detach().to('cpu').numpy().copy()[0]
                 new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
