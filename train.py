@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--seed',type=int,default=42)
     parser.add_argument('--bs',type=int,default=128)
     parser.add_argument('--epoch',type=int,default=500)
-    parser.add_argument('--look_back',type=int,default=40)
+    parser.add_argument('--look_back',type=int,default=20)
     parser.add_argument('--debug', type=bool, default=False)
     parser.add_argument('--model', type=str, default="BaseTransformer")
     parser.add_argument('--criterion', type=str, default="mse")
