@@ -108,7 +108,7 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, look_back=50, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
         self.num_all_features = 39
@@ -119,7 +119,6 @@ class BaseTransformer(nn.Module):
         self.look_back = look_back
 
         self.input_embedding = nn.Linear(self.num_all_features, dim)
-        # 絶対位置エンコーディング
         self.positional_embedding = PositionalEmbedding(dim)
 
         self.pos_embedding = nn.Parameter(torch.randn(1, self.num_pred_features + self.look_back + self.num_control_features, dim))
@@ -136,6 +135,10 @@ class BaseTransformer(nn.Module):
         )
 
     def forward(self, input, spec):
+        print('input.shape', input.shape)
+        print('spec.shape', spec.shape)
+        input = torch.flatten(input, 1, -1)
+        print('input flatten shape', input.shape)
         x = self.input_embedding(input)
         x += self.positional_embedding(x)
 

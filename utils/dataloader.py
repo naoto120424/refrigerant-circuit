@@ -24,7 +24,8 @@ def decimate(data):
 
 # 全データをロードする関数
 def load_data(look_back=20):
-    print('loading data...')
+    print('Load Data')
+    print('----------------------------------------------')
     data_path='../dataset/' 
     csv_files = os.listdir(data_path)
     csv_files.sort()
@@ -33,7 +34,7 @@ def load_data(look_back=20):
     Xdata = []
     Specdata = []
     Ydata = []
-    for file in csv_files:
+    for file in tqdm(csv_files):
         csv_data = pd.read_csv(os.path.join(
             data_path, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
@@ -59,6 +60,7 @@ def load_data(look_back=20):
         os.path.join(data_path, csv_files[0]), skiprows=0).columns.values))
     data['feature_unit'] = list(map(lambda x: x.split('.')[0], pd.read_csv(
         os.path.join(data_path, csv_files[0]), skiprows=1).columns.values))
+    print('----------------------------------------------')
     return data
 
 # 訓練データから標準化用の平均と標準偏差を求める関数
@@ -120,14 +122,19 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     else:
         mean_list, std_list = mean_list, std_list
     # print(input_array.shape)
+    print('\n\nNormalization')
+    print('----------------------------------------------')
+    print('[input]')
     # 入力[look_back秒分]のデータの標準化
-    for i in range(input_array.shape[3]):
+    for i in tqdm(range(input_array.shape[3])):
         input_array[:, :, :, i] = (input_array[:, :, :, i]-mean_list[i])/std_list[i]
+    print('\n[spec]')
     # 入力[制御条件]のデータの標準化
-    for i in range(spec_array.shape[2]):
+    for i in tqdm(range(spec_array.shape[2])):
         spec_array[:, :, i] = (spec_array[:, :, i]-mean_list[i])/std_list[i]
+    print('\n[ground truth]')
     # 出力のデータの標準化
-    for i in range(gt_array.shape[2]):
+    for i in tqdm(range(gt_array.shape[2])):
         gt_array[:, :, i] = (gt_array[:, :, i]-mean_list[i+9])/std_list[i+9]
     
     data['inp'] = rearrange(input_array, 'a b c d -> (a b) c d')
@@ -137,5 +144,6 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     # print(data['inp'].shape)
     # print(data['spec'].shape)
     # print(data['gt'].shape)
+    print('----------------------------------------------')
     
     return MazdaDataset(data), mean_list, std_list

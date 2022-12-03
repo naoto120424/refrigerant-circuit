@@ -35,8 +35,8 @@ transformer_list = {
 }
 
 criterion_list = {
-    'mse': nn.MSELoss(),
-    'l1': nn.L1Loss()
+    'MSE': nn.MSELoss(),
+    'L1': nn.L1Loss()
 }
 
 def modelTransformer(model, look_back):

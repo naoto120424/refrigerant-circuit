@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +19,7 @@ def main():
     parser.add_argument('--look_back',type=int,default=20)
     parser.add_argument('--debug', type=bool, default=False)
     parser.add_argument('--model', type=str, default="BaseTransformer")
-    parser.add_argument('--criterion', type=str, default="mse")
+    parser.add_argument('--criterion', type=str, default="MSE")
     args=parser.parse_args()
 
     if args.debug:
@@ -42,7 +41,6 @@ def main():
     seed_everything(seed=args.seed)
 
     device = deviceChecker()
-    print(f'device: {device}')
 
     data = load_data(look_back=args.look_back)
 
@@ -76,11 +74,16 @@ def main():
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
     best_loss = 100.0
-    print('\ntrain start')
-    print('model: ', args.model)
+    print('\n\nTrain Start')
+    print('----------------------------------------------')
+    print(f'Device    : {str.upper(device)}')
+    print(f'Model     : {args.model}')
+    print(f'Criterion : {args.criterion}')
+    print(f'Look Back : {args.look_back}')
+    print(f'Batch Size: {args.bs}')
     for epoch in range(1, epoch_num + 1):
-        print('------------------------------------')
-        print(f'Epoch {epoch}/{epoch_num}')
+        print('----------------------------------------------')
+        print(f'[Epoch {epoch}/{epoch_num}]')
         model.train()
         epoch_loss = 0.0
         for batch in tqdm(train_dataloader):
@@ -95,6 +98,7 @@ def main():
             epoch_loss += loss.item() * inp.size(0)
             optimizer.step()
         epoch_loss = epoch_loss / len(train_dataloader)
+        print(f'Train Loss: {epoch_loss}\n')
         mlflow.log_metric(f'train loss', epoch_loss, step=epoch)
 
         with torch.no_grad():
@@ -110,7 +114,7 @@ def main():
                 epoch_test_error += test_error.item() * inp.size(0)
             
             epoch_test_error = epoch_test_error / len(val_dataloader)
-            print(f'train Loss: {epoch_loss}, val Loss: {epoch_test_error}')
+            print(f'Val Loss: {epoch_test_error}')
             mlflow.log_metric(f'val loss', epoch_test_error, step=epoch)
 
         result_path = os.path.join('..', 'result')
@@ -124,11 +128,11 @@ def main():
             torch.save(model.state_dict(), model_path)
     mlflow.log_metric(f'best epoch num', best_epoch_num)
 
-    print('------------------------------------\n')
+    print('----------------------------------------------')
 
     with torch.no_grad():
-        print("test start")
-        print('------------------------------------')
+        print("\n\nTest Start")
+        print('----------------------------------------------')
         model.load_state_dict(torch.load(model_path))
         model.eval()
         for test_index in tqdm(test_index_list):
@@ -198,8 +202,8 @@ def main():
     mlflow.log_artifacts(local_dir=result_path, artifact_path='result')
     shutil.rmtree(result_path)
     mlflow.end_run()
-    print('------------------------------------')
-    print("experiment end")
+    print('----------------------------------------------')
+    print("Experiment End")
 
 if __name__ == '__main__':
     main()
