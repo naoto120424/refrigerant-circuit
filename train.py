@@ -10,15 +10,13 @@ from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from model.lstm import LSTMClassifier
-from model.base_transformer import BaseTransformer
 
 def main():
     parser=argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
     parser.add_argument('--e_name',type=str,default='Mazda Refrigerant Circuit Turtrial')
     parser.add_argument('--seed',type=int,default=42)
     parser.add_argument('--bs',type=int,default=128)
-    parser.add_argument('--epoch',type=int,default=500)
+    parser.add_argument('--epoch',type=int,default=100)
     parser.add_argument('--look_back',type=int,default=20)
     parser.add_argument('--debug', type=bool, default=False)
     parser.add_argument('--model', type=str, default="BaseTransformer")
@@ -48,20 +46,21 @@ def main():
 
     data = load_data(look_back=args.look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
+    train_index_list, test_index_list = train_test_split(np.arange(len(data['inp'])), test_size=10)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
 
-    print("creating dataset and normalisation...")
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
+    # print('test list:', test_index_list)
+    # print('val list: ', val_index_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
 
     if args.model in model_list:
         model = model_list[args.model]
-    elif args.model == "BaseTransformer":
-        model = BaseTransformer(look_back=args.look_back)
+    elif args.model in transformer_list:
+        model = modelTransformer(args.model, args.look_back)
     else:
         print("unknown model name")
         return
@@ -78,6 +77,7 @@ def main():
     
     best_loss = 100.0
     print('\ntrain start')
+    print('model: ', args.model)
     for epoch in range(1, epoch_num + 1):
         print('------------------------------------')
         print(f'Epoch {epoch}/{epoch_num}')
@@ -171,9 +171,9 @@ def main():
                     mse = mean_squared_error(np.array(gt_output_data)[:,i], np.array(pred_output_data)[:,i])
                     mae = mean_absolute_error(np.array(gt_output_data)[:,i], np.array(pred_output_data)[:,i])
                     fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
-                    mlflow.log_metric(f'mse_' + output_feature_name[i] + f'_' + case_name, mse)
-                    mlflow.log_metric(f'mae_' + output_feature_name[i] + f'_' + case_name, mae)
-                    mlflow.log_metric(f'fde_' + output_feature_name[i] + f'_' + case_name, fde)
+                    score_list_dict[output_feature_name[i]]['mse'].append(mse)
+                    score_list_dict[output_feature_name[i]]['mae'].append(mae)
+                    score_list_dict[output_feature_name[i]]['fde'].append(fde)
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
                 ax.plot(np.array(gt_output_data)[:,i], color='#e46409', label='gt')
@@ -184,6 +184,16 @@ def main():
                 ax.legend(loc='best')
                 plt.savefig(os.path.join(case_path, f'{output_feature_name[i]}.png'))
                 plt.close()
+
+        for target in target_kW:
+            for evealuation in ['mse', 'mae', 'fde']:
+                np_array = np.array(score_list_dict[target][evealuation])
+                mlflow.log_metrics({
+                    f'{target}_{evealuation.upper()}_max': np.max(np_array),
+                    f'{target}_{evealuation.upper()}_min': np.min(np_array),
+                    f'{target}_{evealuation.upper()}_mean': np.mean(np_array),
+                    f'{target}_{evealuation.upper()}_median': np.median(np_array),
+                })
     
     mlflow.log_artifacts(local_dir=result_path, artifact_path='result')
     shutil.rmtree(result_path)
