@@ -3,7 +3,6 @@ import torch.nn as nn
 import random
 import os
 import numpy as np
-from model.lstm import LSTMClassifier
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
 
@@ -26,11 +25,11 @@ score_list_dict = {
         }
 
 model_list = {
-    'LSTM': LSTMClassifier()
-}
-
-transformer_list = {
-    'BaseTransformer', 
+    'LSTM',
+    'BaseTransformer',
+    'BaseTransformer_only1pe',
+    'BaseTransformer_cls_pool',
+    'BaseTransformer_only1pe_cls_pool',
     'BaseTransformer_agent_first'
 }
 
@@ -39,13 +38,23 @@ criterion_list = {
     'L1': nn.L1Loss()
 }
 
-def modelTransformer(model, look_back):
-    if model == 'BaseTransformer':
+def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout, emb_dropout):
+    if model == 'LSTM':
+        from model.lstm import LSTMClassifier
+        return LSTMClassifier(num_hidden_units=dim, num_layers=depth, dropout=dropout)
+    elif model == 'BaseTransformer':
         from model.base_transformer import BaseTransformer
+    elif model == 'BaseTransformer_only1pe':
+        from model.base_transformer_only1pe import BaseTransformer
+    elif model == 'BaseTransformer_cls_pool':
+        from model.base_transformer_cls_pool import BaseTransformer
+    elif model == 'BaseTransformer_only1pe_cls_pool':
+        from model.base_transformer_only1pe_cls_pool import BaseTransformer
     elif model == 'BaseTransformer_agent_first':
         from model.base_transformer_agent_first import BaseTransformer
 
-    return BaseTransformer(look_back=look_back)
+    return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim,
+                           dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
 
 def deviceChecker():
     if torch.backends.mps.is_available():

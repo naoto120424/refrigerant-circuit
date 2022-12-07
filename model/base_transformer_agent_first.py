@@ -140,7 +140,7 @@ class BaseTransformer(nn.Module):
         # print(input.shape)
         x = self.input_embedding(input)
         # print('input_embedding', x.shape)
-        x += self.positional_embedding(x)
+        # x += self.positional_embedding(x)
         # print('positional_embedding', x.shape)
 
         b, _, _ = x.shape

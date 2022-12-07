@@ -2,14 +2,14 @@ import torch
 import torch.nn as nn
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, input_dim=39, num_hidden_units=256, spec_dim=9, output_dim=30):
+    def __init__(self, input_dim=39, num_layers=2, num_hidden_units=256, spec_dim=9, output_dim=30, dropout=0.2):
         super(LSTMClassifier, self).__init__()
         self.input_dim = input_dim
         self.num_hidden_units = num_hidden_units
         self.lstm = nn.LSTM(input_size=input_dim,
                             hidden_size=num_hidden_units,
-                            num_layers=2,
-                            dropout=0.2,
+                            num_layers=num_layers,
+                            dropout=dropout,
                             batch_first=True
                             )
         self.spec_dense = nn.Linear(spec_dim, num_hidden_units)

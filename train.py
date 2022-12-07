@@ -12,14 +12,21 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 def main():
     parser=argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
-    parser.add_argument('--e_name',type=str,default='Mazda Refrigerant Circuit Turtrial')
-    parser.add_argument('--seed',type=int,default=42)
-    parser.add_argument('--bs',type=int,default=128)
-    parser.add_argument('--epoch',type=int,default=100)
-    parser.add_argument('--look_back',type=int,default=20)
+    parser.add_argument('--e_name', type=str, default='Mazda Refrigerant Circuit Tutorial')
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--bs', type=int, default=64)
+    parser.add_argument('--epoch', type=int, default=100)
+    parser.add_argument('--look_back', type=int, default=20)
+    parser.add_argument('--dim', type=int, default=512)
+    parser.add_argument('--depth', type=int, default=3)
+    parser.add_argument('--heads', type=int, default=8)
+    parser.add_argument('--fc_dim', type=int, default=2048)
+    parser.add_argument('--dim_head', type=int, default=64)
+    parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--emb_dropout', type=float, default=0.1)
     parser.add_argument('--debug', type=bool, default=False)
-    parser.add_argument('--model', type=str, default="BaseTransformer")
-    parser.add_argument('--criterion', type=str, default="MSE")
+    parser.add_argument('--model', type=str, default='BaseTransformer')
+    parser.add_argument('--criterion', type=str, default='MSE')
     args=parser.parse_args()
 
     if args.debug:
@@ -30,40 +37,42 @@ def main():
     mlflow.set_tracking_uri('../mlflow_experiment')
     mlflow.set_experiment(args.e_name)
     mlflow.start_run()
-    mlflow.log_param("seed", args.seed)
-    mlflow.log_param("epoch num", epoch_num)
-    mlflow.log_param("batch size", args.bs)
-    mlflow.log_param("look back size", args.look_back)
-    mlflow.log_param("debug", args.debug)
-    mlflow.log_param("model", args.model)
-    mlflow.log_param("criterion", args.criterion)
+    mlflow.log_param('seed', args.seed)
+    mlflow.log_param('epoch num', epoch_num)
+    mlflow.log_param('batch size', args.bs)
+    mlflow.log_param('look back', args.look_back)
+    mlflow.log_param('debug', args.debug)
+    mlflow.log_param('model', args.model)
+    mlflow.log_param('criterion', args.criterion)
+    mlflow.log_param('dim', args.dim)
+    mlflow.log_param('depth', args.depth)
+    mlflow.log_param('dropout', args.dropout)
+    if 'BaseTransformer' in args.model:
+        mlflow.log_param('heads', args.heads)
+        mlflow.log_param('fc_dim', args.fc_dim)
+        mlflow.log_param('dim_head', args.dim_head)
+        mlflow.log_param('emb_dropout', args.emb_dropout)
 
     seed_everything(seed=args.seed)
 
     device = deviceChecker()
-
     data = load_data(look_back=args.look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(len(data['inp'])), test_size=10)
-    train_index_list, val_index_list = train_test_split(train_index_list,test_size=10)
+    train_index_list, test_index_list = train_test_split(np.arange(len(data['inp'])), test_size=200)
+    train_index_list, val_index_list = train_test_split(train_index_list,test_size=100)
 
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
-    # print('test list:', test_index_list)
-    # print('val list: ', val_index_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
 
     if args.model in model_list:
-        model = model_list[args.model]
-    elif args.model in transformer_list:
-        model = modelTransformer(args.model, args.look_back)
+        model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads,
+                              args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
     else:
         print("unknown model name")
         return
-
-    model.to(device)
     
     if args.criterion in criterion_list:
         criterion = criterion_list[args.criterion]
@@ -71,16 +80,27 @@ def main():
         print("unknown criterion name")
         return
 
+    model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     
-    best_loss = 100.0
+    best_loss = 1000.0
     print('\n\nTrain Start')
     print('----------------------------------------------')
-    print(f'Device    : {str.upper(device)}')
-    print(f'Model     : {args.model}')
-    print(f'Criterion : {args.criterion}')
-    print(f'Look Back : {args.look_back}')
-    print(f'Batch Size: {args.bs}')
+    print(f'Device      : {str.upper(device)}')
+    print(f'Model       : {args.model}')
+    print(f' dim        : {args.dim}')
+    print(f' layer      : {args.depth}')
+    print(f' dropout    : {args.dropout}')
+    if 'BaseTransformer' in args.model:
+        print(f' heads      : {args.heads}')
+        print(f' fc_dim     : {args.fc_dim}')
+        print(f' dim_head   : {args.dim_head}')
+        print(f' emb_dropout: {args.emb_dropout}')
+    print(f'Criterion   : {args.criterion}')
+    print(f'Look Back   : {args.look_back}')
+    print(f'Batch Size  : {args.bs}')
+    print(f'train case  : {len(train_index_list)}')
+    print(f'val case    : {len(val_index_list)}')
     for epoch in range(1, epoch_num + 1):
         print('----------------------------------------------')
         print(f'[Epoch {epoch}/{epoch_num}]')
@@ -98,7 +118,7 @@ def main():
             epoch_loss += loss.item() * inp.size(0)
             optimizer.step()
         epoch_loss = epoch_loss / len(train_dataloader)
-        print(f'Train Loss: {epoch_loss}\n')
+        print(f'Train Loss: {epoch_loss}')
         mlflow.log_metric(f'train loss', epoch_loss, step=epoch)
 
         with torch.no_grad():
@@ -132,6 +152,8 @@ def main():
 
     with torch.no_grad():
         print("\n\nTest Start")
+        print('----------------------------------------------')
+        print(f'Test Case: {len(test_index_list)}')
         print('----------------------------------------------')
         model.load_state_dict(torch.load(model_path))
         model.eval()
@@ -204,6 +226,7 @@ def main():
     mlflow.end_run()
     print('----------------------------------------------')
     print("Experiment End")
+
 
 if __name__ == '__main__':
     main()

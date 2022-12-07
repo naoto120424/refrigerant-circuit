@@ -29,15 +29,17 @@ def load_data(look_back=20):
     data_path='../dataset/' 
     csv_files = os.listdir(data_path)
     csv_files.sort()
+    csv_files.remove('test')
 
     data = {}
     Xdata = []
     Specdata = []
     Ydata = []
+
     for file in tqdm(csv_files):
-        csv_data = pd.read_csv(os.path.join(
-            data_path, file), skiprows=1).values
+        csv_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
+        # single_data = csv_data[:, 1:]
         spec_data = single_data[:, :9]
         output_data = single_data[:, 9:]
         input_time_list = []
