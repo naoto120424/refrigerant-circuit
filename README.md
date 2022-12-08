@@ -2,10 +2,5 @@
 
 How to use "mlflow ui"
 ```
-mlflow ui --backend-store-uri ../mlflow_experiment
-```
-
-git key
-```
-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
+mlflow ui -h 'ip addr' --backend-store-uri ../mlflow_experiment
 ```
