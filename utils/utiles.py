@@ -24,13 +24,26 @@ score_list_dict = {
             }
         }
 
+fixed_case_list = {
+    'case0001_Comp_rpm_Swing_test_VF_Fix',
+    'case0002_Comp_rpm_Swing_test_VF_Fix',
+    'case0003_Comp_rpm_Swing_test_VF_Fix',
+    'case0004_Comp_rpm_Swing_test_VF_Fix',
+    'case0001_EXV_Swinbg_test_VF_Fix',
+    'case0002_EXV_Swinbg_test_VF_Fix',
+    'case0003_EXV_Swinbg_test_VF_Fix',
+    'case0004_EXV_Swinbg_test_VF_Fix',
+}
+
 model_list = {
     'LSTM',
     'BaseTransformer',
     'BaseTransformer_only1pe',
     'BaseTransformer_cls_pool',
     'BaseTransformer_only1pe_cls_pool',
-    'BaseTransformer_agent_first'
+    'BaseTransformer_input_sensor_first',
+    'BaseTransformer_input_3types',
+    'BaseTransformer_input_flattened'
 }
 
 criterion_list = {
@@ -51,7 +64,11 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
     elif model == 'BaseTransformer_only1pe_cls_pool':
         from model.base_transformer_only1pe_cls_pool import BaseTransformer
     elif model == 'BaseTransformer_agent_first':
-        from model.base_transformer_agent_first import BaseTransformer
+        from model.base_transformer_input_sensor_first import BaseTransformer
+    elif model == 'BaseTransformer_input_3types':
+        from model.base_transformer_input_3types import BaseTransformer
+    elif model == 'BaseTransformer_input_flattened':
+        from model.base_transformer_input_flattened import BaseTransformer
 
     return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim,
                            dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)

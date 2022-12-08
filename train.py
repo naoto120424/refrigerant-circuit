@@ -58,8 +58,11 @@ def main():
     device = deviceChecker()
     data = load_data(look_back=args.look_back)
 
-    train_index_list, test_index_list = train_test_split(np.arange(len(data['inp'])), test_size=200)
+    num_fixed_data = 8
+    train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data+4, len(data['inp'])), test_size=200)
     train_index_list, val_index_list = train_test_split(train_index_list,test_size=100)
+    test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+    train_index_list = np.append(train_index_list, np.arange(num_fixed_data, num_fixed_data+4))
 
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
@@ -158,7 +161,10 @@ def main():
         model.load_state_dict(torch.load(model_path))
         model.eval()
         for test_index in tqdm(test_index_list):
-            case_name = f'case{str(test_index+1).zfill(4)}'
+            if test_index in np.arange(0, num_fixed_data):
+                case_name = list(fixed_case_list)[test_index]
+            else:
+                case_name = f'case{str(test_index-7).zfill(4)}'
             case_path = os.path.join(result_path, 'img', case_name)
             os.makedirs(case_path, exist_ok=True)
             inp_data = data['inp'][test_index]

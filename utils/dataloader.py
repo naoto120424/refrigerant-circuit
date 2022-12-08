@@ -29,7 +29,6 @@ def load_data(look_back=20):
     data_path='../dataset/' 
     csv_files = os.listdir(data_path)
     csv_files.sort()
-    csv_files.remove('test')
 
     data = {}
     Xdata = []
@@ -53,7 +52,7 @@ def load_data(look_back=20):
         Specdata.append(np.array(spec_list))
         Ydata.append(np.array(gt_list))
     data['inp'] = np.array(Xdata)     # shape(case_num, 1179, 20, 39)
-    data['spec'] = np.array(Specdata)  # shape(case_num, 1179, 9)
+    data['spec'] = np.array(Specdata) # shape(case_num, 1179, 9)
     data['gt'] = np.array(Ydata)      # shape(case_num, 1179, 30)
     # print(data['inp'].shape)
     # print(data['spec'].shape)
@@ -124,7 +123,10 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     else:
         mean_list, std_list = mean_list, std_list
     # print(input_array.shape)
-    print('\n\nNormalization')
+    if is_train:
+        print('\n\nTrain Normalization')
+    else:
+        print('\n\nValidation Normalization')
     print('----------------------------------------------')
     print('[input]')
     # 入力[look_back秒分]のデータの標準化
