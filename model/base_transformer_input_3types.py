@@ -9,6 +9,7 @@ from einops import rearrange, repeat
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
+
 def clones(module, n):
     # produce N identical layers.
     assert isinstance(module, nn.Module)
@@ -24,20 +25,24 @@ class PositionalEmbedding(nn.Module):
         pe.requires_grad = False
 
         position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
+        div_term = (
+            torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)
+        ).exp()
 
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
 
         pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x):
-        return self.pe[:, :x.size(1)]
+        return self.pe[:, : x.size(1)]
 
 
 class InputEmbedding(nn.Module):
-    def __init__(self, num_control_features, num_byproduct_features, num_target_features, dim):
+    def __init__(
+        self, num_control_features, num_byproduct_features, num_target_features, dim
+    ):
         super(InputEmbedding, self).__init__()
         self.num_control_features = num_control_features
         self.num_byproduct_features = num_byproduct_features
@@ -50,13 +55,22 @@ class InputEmbedding(nn.Module):
         self.positional_embedding = PositionalEmbedding(dim)
 
     def forward(self, x):
-        control = self.control_embedding(x[:, :, :self.num_control_features])
+        control = self.control_embedding(x[:, :, : self.num_control_features])
         control += self.positional_embedding(control)
         # print('control embedding: ', control.shape)
-        byproduct = self.byproduct_embedding(x[:, :, self.num_control_features:self.num_control_features+self.num_byproduct_features])
+        byproduct = self.byproduct_embedding(
+            x[
+                :,
+                :,
+                self.num_control_features : self.num_control_features
+                + self.num_byproduct_features,
+            ]
+        )
         byproduct += self.positional_embedding(byproduct)
         # print('byproduct embedding: ', byproduct.shape)
-        target = self.target_embedding(x[:, :, self.num_control_features+self.num_byproduct_features:])
+        target = self.target_embedding(
+            x[:, :, self.num_control_features + self.num_byproduct_features :]
+        )
         target += self.positional_embedding(target)
         # print('target embedding: ', target.shape)
 
@@ -76,14 +90,14 @@ class PreNorm(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout=0.):
+    def __init__(self, dim, hidden_dim, dropout=0.0):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout)
+            nn.Dropout(dropout),
         )
 
     def forward(self, x):
@@ -97,26 +111,27 @@ class Attention(nn.Module):
         project_out = not (heads == 1 and dim_head == dim)
 
         self.heads = heads
-        self.scale = dim_head ** -0.5
+        self.scale = dim_head**-0.5
 
         self.attend = nn.Softmax(dim=-1)
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
 
-        self.to_out = nn.Sequential(
-            nn.Linear(inner_dim, dim),
-            nn.Dropout(dropout)
-        ) if project_out else nn.Identity()
+        self.to_out = (
+            nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
+            if project_out
+            else nn.Identity()
+        )
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
 
         attn = self.attend(dots)
 
         out = torch.matmul(attn, v)
-        out = rearrange(out, 'b h n d -> b n (h d)')
+        out = rearrange(out, "b h n d -> b n (h d)")
         return self.to_out(out)
 
 
@@ -125,10 +140,19 @@ class Transformer(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList([])
         for _ in range(depth):
-            self.layers.append(nn.ModuleList([
-                PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)),
-                PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout))
-            ]))
+            self.layers.append(
+                nn.ModuleList(
+                    [
+                        PreNorm(
+                            dim,
+                            Attention(
+                                dim, heads=heads, dim_head=dim_head, dropout=dropout
+                            ),
+                        ),
+                        PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
+                    ]
+                )
+            )
 
     def forward(self, x):
         for attn, ff in self.layers:
@@ -138,7 +162,17 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(
+        self,
+        look_back=20,
+        dim=512,
+        depth=3,
+        heads=8,
+        fc_dim=2048,
+        dim_head=64,
+        dropout=0.1,
+        emb_dropout=0.1,
+    ):
         super().__init__()
 
         self.num_all_features = 39
@@ -148,7 +182,12 @@ class BaseTransformer(nn.Module):
         self.num_target_features = 3
         self.look_back = look_back
 
-        self.input_embedding = InputEmbedding(self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
+        self.input_embedding = InputEmbedding(
+            self.num_control_features,
+            self.num_byproduct_features,
+            self.num_target_features,
+            dim,
+        )
         # 絶対位置エンコーディング
         # self.positional_embedding = PositionalEmbedding(dim)
 
@@ -161,8 +200,7 @@ class BaseTransformer(nn.Module):
         self.transformer = Transformer(dim, depth, heads, dim_head, fc_dim, dropout)
 
         self.generator = nn.Sequential(
-            nn.LayerNorm(dim),
-            nn.Linear(dim, self.num_pred_features)
+            nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features)
         )
 
     def forward(self, input, spec):
@@ -174,11 +212,11 @@ class BaseTransformer(nn.Module):
         # pred_tokens = repeat(self.pred_token, '() n d -> b n d', b=b)
         # x = torch.cat((pred_tokens, x), dim=1)
 
-        spec = torch.unsqueeze(spec, 1) # bx9 -> bx1x9
-        spec = torch.unsqueeze(spec, 1) # bx1x9 -> bx1x1x9
+        spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
+        spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
 
         for i, spec_embedding in enumerate(self.spec_emb_list):
-            if(i == 0):
+            if i == 0:
                 spec_emb_all = spec_embedding(spec[:, :, :, i])
             else:
                 spec_emb = spec_embedding(spec[:, :, :, i])
@@ -186,10 +224,10 @@ class BaseTransformer(nn.Module):
 
         x = torch.cat((x, spec_emb_all), dim=1)
         # print(x.shape)
-        
+
         # x += self.pos_embedding
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)
-        x=self.generator(x)
+        x = self.generator(x)
         return x
