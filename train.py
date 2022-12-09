@@ -13,11 +13,9 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
-    parser.add_argument(
-        "--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial"
-    )
+    parser.add_argument("--e_name", type=str, default="Refrigerant Circuit Project")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--bs", type=int, default=64)
+    parser.add_argument("--bs", type=int, default=32)
     parser.add_argument("--epoch", type=int, default=100)
     parser.add_argument("--look_back", type=int, default=20)
     parser.add_argument("--dim", type=int, default=512)
@@ -66,11 +64,26 @@ def main():
         np.arange(num_fixed_data, len(data["inp"])), test_size=200
     )
     train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
-    test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
-    # train_index_list = np.append(train_index_list, np.arange(num_fixed_data, num_fixed_data+4))
+    # test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+    for i, num in enumerate(train_index_list):
+        if num == 8 or num == 108:
+            train_index_list = np.delete(train_index_list, i)
+    for i, num in enumerate(val_index_list):
+        if num == 8 or num == 108:
+            val_index_list = np.delete(val_index_list, i)
+    for i, num in enumerate(test_index_list):
+        if num == 8 or num == 108:
+            test_index_list = np.delete(test_index_list, i)
+    """
+    train_index_list = np.append(
+        train_index_list, np.arange(num_fixed_data, num_fixed_data + 1)
+    )
+    """
+    """
     print("\ntrain_index_list: ", np.sort(train_index_list))
     print("\nval index list: ", np.sort(val_index_list))
     print("\ntest index list: ", np.sort(test_index_list))
+    """
 
     train_dataset, mean_list, std_list = create_dataset(
         data, train_index_list, is_train=True
