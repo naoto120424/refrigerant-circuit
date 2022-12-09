@@ -37,32 +37,28 @@ class PositionalEmbedding(nn.Module):
 
 
 class InputEmbedding(nn.Module):
-    def __init__(self, num_control_features, num_byproduct_features, num_target_features, dim):
+    def __init__(self, look_back, num_all_features, num_control_features, num_byproduct_features, num_target_features, dim):
         super(InputEmbedding, self).__init__()
-        self.num_control_features = num_control_features
-        self.num_byproduct_features = num_byproduct_features
-        self.num_target_features = num_target_features
+        self.num_all_features = num_all_features
 
-        self.control_embedding = nn.Linear(num_control_features, dim)
-        self.byproduct_embedding = nn.Linear(num_byproduct_features, dim)
-        self.target_embedding = nn.Linear(num_target_features, dim)
+        self.input_emb_list = clones(nn.Linear(1, dim), self.num_all_features)
 
         self.positional_embedding = PositionalEmbedding(dim)
 
     def forward(self, x):
-        control = self.control_embedding(x[:, :, :self.num_control_features])
-        control += self.positional_embedding(control)
-        # print('control embedding: ', control.shape)
-        byproduct = self.byproduct_embedding(x[:, :, self.num_control_features:self.num_control_features+self.num_byproduct_features])
-        byproduct += self.positional_embedding(byproduct)
-        # print('byproduct embedding: ', byproduct.shape)
-        target = self.target_embedding(x[:, :, self.num_control_features+self.num_byproduct_features:])
-        target += self.positional_embedding(target)
-        # print('target embedding: ', target.shape)
+        x = torch.unsqueeze(x, 2)
+        # print(x.shape)
+        for i, input_embedding in enumerate(self.input_emb_list):
+            if i == 0:
+                input_emb_all = input_embedding(x[:, :, :, i])
+            else:
+                input_emb = input_embedding(x[:, :, :, i])
+                input_emb_all = torch.cat((input_emb_all, input_emb), dim=1)
+        # print(input_emb_all.shape)
+        input_emb_all += self.positional_embedding(input_emb_all)
+        # print('input emb all', input_emb_all.shape)
 
-        x = torch.cat([control, byproduct, target], dim=1)
-
-        return x
+        return input_emb_all
 
 
 class PreNorm(nn.Module):
@@ -148,7 +144,7 @@ class BaseTransformer(nn.Module):
         self.num_target_features = 3
         self.look_back = look_back
 
-        self.input_embedding = InputEmbedding(self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
+        self.input_embedding = InputEmbedding(self.look_back, self.num_all_features, self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
         # 絶対位置エンコーディング
         # self.positional_embedding = PositionalEmbedding(dim)
 
@@ -167,6 +163,7 @@ class BaseTransformer(nn.Module):
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
+        # print(x.shape)
         # x += self.positional_embedding(x)
 
         # b, _, _ = x.shape
@@ -183,10 +180,10 @@ class BaseTransformer(nn.Module):
             else:
                 spec_emb = spec_embedding(spec[:, :, :, i])
                 spec_emb_all = torch.cat((spec_emb_all, spec_emb), dim=1)
+        # print(spec_emb_all.shape)
 
         x = torch.cat((x, spec_emb_all), dim=1)
-        # print(x.shape)
-        
+
         # x += self.pos_embedding
         x = self.dropout(x)
         x = self.transformer(x)
