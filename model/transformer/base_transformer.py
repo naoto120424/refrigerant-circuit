@@ -149,6 +149,7 @@ class BaseTransformer(nn.Module):
                 spec_emb_all = torch.cat((spec_emb_all, spec_emb), dim=1)
 
         x = torch.cat((x, spec_emb_all), dim=1)
+        # print(x.shape)
 
         x += self.pos_embedding
         x = self.dropout(x)

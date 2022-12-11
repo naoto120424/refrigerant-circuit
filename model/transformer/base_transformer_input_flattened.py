@@ -148,6 +148,7 @@ class BaseTransformer(nn.Module):
 
         self.input_embedding = InputEmbedding(self.num_all_features, dim)
 
+        self.pos_embedding = nn.Parameter(torch.randn(1, self.look_back * self.num_all_features + self.num_control_features, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
         self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
@@ -171,6 +172,7 @@ class BaseTransformer(nn.Module):
 
         x = torch.cat((x, spec_emb_all), dim=1)
 
+        x += self.pos_embedding
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)

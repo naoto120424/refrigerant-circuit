@@ -124,6 +124,7 @@ class BaseTransformer(nn.Module):
         self.input_embedding = nn.Linear(self.look_back, dim)
         self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
 
+        self.pos_embedding = nn.Parameter(torch.randn(1, self.num_all_features + self.num_control_features, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
         self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
@@ -154,6 +155,7 @@ class BaseTransformer(nn.Module):
         x = torch.cat((x, spec_emb_all), dim=1)
         # print('cat with spec', x.shape)
 
+        x += self.pos_embedding
         x = self.dropout(x)
         x = self.transformer(x)
         # print('x.shape', x.shape)

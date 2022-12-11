@@ -97,10 +97,7 @@ class Transformer(nn.Module):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(
-                            dim,
-                            Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout),
-                        ),
+                        PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
@@ -124,7 +121,7 @@ class BaseTransformer(nn.Module):
         self.num_target_features = 3
         self.look_back = look_back
 
-        self.input_embedding = nn.Linear(self.num_all_features, dim)
+        self.input_embedding = nn.Linear(self.look_back, dim)
         self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
 
         self.dropout = nn.Dropout(emb_dropout)
@@ -136,8 +133,13 @@ class BaseTransformer(nn.Module):
         self.generator = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features))
 
     def forward(self, input, spec):
+        # print('input.shape', input.shape)
+        input = torch.permute(input, (0, 2, 1))
+        # print(input.shape)
         x = self.input_embedding(input)
+        # print('input_embedding', x.shape)
         x += self.positional_embedding(x)
+        # print('positional_embedding', x.shape)
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -150,9 +152,12 @@ class BaseTransformer(nn.Module):
                 spec_emb_all = torch.cat((spec_emb_all, spec_emb), dim=1)
 
         x = torch.cat((x, spec_emb_all), dim=1)
+        # print('cat with spec', x.shape)
 
         x = self.dropout(x)
         x = self.transformer(x)
+        # print('x.shape', x.shape)
         x = x.mean(dim=1)
+        # print('x.shape mean', x.shape)
         x = self.generator(x)
         return x

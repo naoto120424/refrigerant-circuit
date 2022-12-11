@@ -25,9 +25,7 @@ class PositionalEmbedding(nn.Module):
         pe.requires_grad = False
 
         position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = (
-            torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)
-        ).exp()
+        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
 
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -76,11 +74,7 @@ class Attention(nn.Module):
         self.attend = nn.Softmax(dim=-1)
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
 
-        self.to_out = (
-            nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
-            if project_out
-            else nn.Identity()
-        )
+        self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
@@ -105,9 +99,7 @@ class Transformer(nn.Module):
                     [
                         PreNorm(
                             dim,
-                            Attention(
-                                dim, heads=heads, dim_head=dim_head, dropout=dropout
-                            ),
+                            Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout),
                         ),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
@@ -122,17 +114,7 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(
-        self,
-        look_back,
-        dim=512,
-        depth=3,
-        heads=8,
-        fc_dim=2048,
-        dim_head=64,
-        dropout=0.1,
-        emb_dropout=0.1,
-    ):
+    def __init__(self, look_back, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
         self.num_all_features = 39
