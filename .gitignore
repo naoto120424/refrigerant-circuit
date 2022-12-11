@@ -2,9 +2,10 @@
 /schedule.py
 /confirm.py
 /case0001.py
+/データセットに関する説明.txt
+
 /data_plot/
 /data_plot_fixed/
 /.vscode/
 /model/__pycache__/
 /utils/__pycache__/
-/データセットに関する説明.txt
