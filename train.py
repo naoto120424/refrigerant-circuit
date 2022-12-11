@@ -60,53 +60,20 @@ def main():
     data = load_data(look_back=args.look_back)
 
     num_fixed_data = 8
-    train_index_list, test_index_list = train_test_split(
-        np.arange(num_fixed_data, len(data["inp"])), test_size=200
-    )
-    train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
-    # test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
-    for i, num in enumerate(train_index_list):
-        if num == 8 or num == 108:
-            train_index_list = np.delete(train_index_list, i)
-    for i, num in enumerate(val_index_list):
-        if num == 8 or num == 108:
-            val_index_list = np.delete(val_index_list, i)
-    for i, num in enumerate(test_index_list):
-        if num == 8 or num == 108:
-            test_index_list = np.delete(test_index_list, i)
-    """
-    train_index_list = np.append(
-        train_index_list, np.arange(num_fixed_data, num_fixed_data + 1)
-    )
-    """
-    """
-    print("\ntrain_index_list: ", np.sort(train_index_list))
-    print("\nval index list: ", np.sort(val_index_list))
-    print("\ntest index list: ", np.sort(test_index_list))
-    """
+    num_control_features = 6
 
-    train_dataset, mean_list, std_list = create_dataset(
-        data, train_index_list, is_train=True
-    )
-    val_dataset, _, _ = create_dataset(
-        data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list
-    )
+    train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
+    train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
+    test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+
+    train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
+    val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
 
     if args.model in model_list:
-        model = modelDecision(
-            args.model,
-            args.look_back,
-            args.dim,
-            args.depth,
-            args.heads,
-            args.fc_dim,
-            args.dim_head,
-            args.dropout,
-            args.emb_dropout,
-        )
+        model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
     else:
         print("unknown model name")
         return
@@ -208,60 +175,34 @@ def main():
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
             for i in range(scaling_input_data.shape[1]):
-                scaling_input_data[:, i] = (
-                    scaling_input_data[:, i] - mean_list[i]
-                ) / std_list[i]
+                scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i]) / std_list[i]
             for i in range(scaling_spec_data.shape[1]):
-                scaling_spec_data[:, i] = (
-                    scaling_spec_data[:, i] - mean_list[i]
-                ) / std_list[i]
+                scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
 
             for i in range(scaling_spec_data.shape[0]):
-                input = (
-                    torch.from_numpy(
-                        scaling_input_data[i : i + args.look_back].astype(np.float32)
-                    )
-                    .clone()
-                    .unsqueeze(0)
-                    .to(device)
-                )
-                spec = (
-                    torch.from_numpy(scaling_spec_data[i].astype(np.float32))
-                    .clone()
-                    .unsqueeze(0)
-                    .to(device)
-                )
-                scaling_pred_data = (
-                    model(input, spec).detach().to("cpu").numpy().copy()[0]
-                )
-                new_scaling_input_data = np.append(
-                    scaling_spec_data[i], scaling_pred_data
-                )[np.newaxis, :]
-                scaling_input_data = np.concatenate(
-                    [scaling_input_data, new_scaling_input_data], axis=0
-                )
+                input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
+                spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
+                scaling_pred_data = model(input, spec).detach().to("cpu").numpy().copy()[0]
+                new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
+                scaling_input_data = np.concatenate([scaling_input_data, new_scaling_input_data], axis=0)
 
             pred_data = scaling_input_data.copy()
             for i in range(scaling_input_data.shape[1]):
                 pred_data[:, i] = pred_data[:, i] * std_list[i] + mean_list[i]
-            pred_output_data = pred_data[:, 9:]
+            pred_output_data = pred_data[:, num_control_features:]
 
-            output_feature_name = data["feature_name"][10:]
-            output_feature_unit = data["feature_unit"][10:]
+            output_feature_name = data["feature_name"][num_control_features + 1 :]
+            output_feature_unit = data["feature_unit"][num_control_features + 1 :]
             gt_output_data = []
             for inp in inp_data[0]:
-                gt_output_data.append(inp[9:])
+                gt_output_data.append(inp[num_control_features:])
             for gt in gt_data:
                 gt_output_data.append(gt)
 
             for i in range(len(output_feature_name)):
                 if output_feature_name[i] in target_kW:
-                    mse = mean_squared_error(
-                        np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i]
-                    )
-                    mae = mean_absolute_error(
-                        np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i]
-                    )
+                    mse = mean_squared_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
+                    mae = mean_absolute_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
                     fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
                     score_list_dict[output_feature_name[i]]["mse"].append(mse)
                     score_list_dict[output_feature_name[i]]["mae"].append(mae)

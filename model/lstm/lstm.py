@@ -3,20 +3,12 @@ import torch.nn as nn
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(
-        self,
-        input_dim=39,
-        num_layers=2,
-        num_hidden_units=256,
-        spec_dim=9,
-        output_dim=30,
-        dropout=0.2,
-    ):
+    def __init__(self, look_back, num_layers=2, num_hidden_units=256, spec_dim=6, output_dim=30, dropout=0.2):
         super(LSTMClassifier, self).__init__()
-        self.input_dim = input_dim
+        self.input_dim = 36
         self.num_hidden_units = num_hidden_units
         self.lstm = nn.LSTM(
-            input_size=input_dim,
+            input_size=self.input_dim,
             hidden_size=num_hidden_units,
             num_layers=num_layers,
             dropout=dropout,
@@ -32,7 +24,5 @@ class LSTMClassifier(nn.Module):
     def forward(self, x, spec, h=None):
         hidden1, _ = self.lstm(x, h)
         hidden2 = self.spec_dense(spec)
-        y = self.predicter(
-            torch.cat([hidden1[:, -1, :], hidden2], dim=1)
-        )  # 最後のセルだけを取り出している
+        y = self.predicter(torch.cat([hidden1[:, -1, :], hidden2], dim=1))  # 最後のセルだけを取り出している
         return y

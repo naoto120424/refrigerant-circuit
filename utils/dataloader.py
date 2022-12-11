@@ -32,6 +32,8 @@ def load_data(look_back=20):
     csv_files = os.listdir(data_path)
     csv_files.sort()
 
+    num_control_features = 6
+
     data = {}
     Xdata = []
     Specdata = []
@@ -41,8 +43,9 @@ def load_data(look_back=20):
         csv_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
         # single_data = csv_data[:, 1:]
-        spec_data = single_data[:, :9]
-        output_data = single_data[:, 9:]
+        single_data = np.delete(single_data, [6, 7, 9], axis=1)  # Chiller
+        spec_data = single_data[:, :num_control_features]
+        output_data = single_data[:, num_control_features:]
         input_time_list = []
         spec_list = []
         gt_list = []
@@ -56,25 +59,14 @@ def load_data(look_back=20):
     data["inp"] = np.array(Xdata)  # shape(case_num, 1179, 20, 39)
     data["spec"] = np.array(Specdata)  # shape(case_num, 1179, 9)
     data["gt"] = np.array(Ydata)  # shape(case_num, 1179, 30)
-    # print(data['inp'].shape)
-    # print(data['spec'].shape)
-    # print(data['gt'].shape)
-    data["feature_name"] = list(
-        map(
-            lambda x: x.split(".")[0],
-            pd.read_csv(
-                os.path.join(data_path, csv_files[0]), skiprows=0
-            ).columns.values,
-        )
-    )
-    data["feature_unit"] = list(
-        map(
-            lambda x: x.split(".")[0],
-            pd.read_csv(
-                os.path.join(data_path, csv_files[0]), skiprows=1
-            ).columns.values,
-        )
-    )
+    # print(data["inp"].shape)
+    # print(data["spec"].shape)
+    # print(data["gt"].shape)
+    data["feature_name"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(data_path, csv_files[0]), skiprows=0).columns.values))
+    data["feature_unit"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(data_path, csv_files[0]), skiprows=1).columns.values))
+    for i in [9, 7, 6]:  # Chiller
+        del data["feature_name"][i]  # Chiller
+        del data["feature_unit"][i]  # Chiller
     print("----------------------------------------------")
     return data
 
@@ -92,6 +84,8 @@ def find_meanstd(train_index_list):
         single_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
         input_data.append(decimate(single_data)[:, 1:])
     input_array = np.array(input_data)
+    input_array = np.delete(input_array, [6, 7, 9], axis=2)  # Chiller
+    # print(input_array.shape)
     mean_list = []
     std_list = []
     for i in range(input_array.shape[2]):
@@ -120,6 +114,7 @@ class MazdaDataset(Dataset):
 
 # データセットを作成する関数
 def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[]):
+    num_control_features = 6  # Chiller
     data = {}
     input_data_list = []
     spec_data_list = []
@@ -156,15 +151,15 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     print("\n[ground truth]")
     # 出力のデータの標準化
     for i in tqdm(range(gt_array.shape[2])):
-        gt_array[:, :, i] = (gt_array[:, :, i] - mean_list[i + 9]) / std_list[i + 9]
+        gt_array[:, :, i] = (gt_array[:, :, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 
     data["inp"] = rearrange(input_array, "a b c d -> (a b) c d")
     data["spec"] = rearrange(spec_array, "a b c -> (a b) c")
     data["gt"] = rearrange(gt_array, "a b c -> (a b) c")
 
-    # print(data['inp'].shape)
-    # print(data['spec'].shape)
-    # print(data['gt'].shape)
-    print("----------------------------------------------")
+    # print(data["inp"].shape)
+    # print(data["spec"].shape)
+    # print(data["gt"].shape)
+    # print("----------------------------------------------")
 
     return MazdaDataset(data), mean_list, std_list

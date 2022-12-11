@@ -25,9 +25,7 @@ class PositionalEmbedding(nn.Module):
         pe.requires_grad = False
 
         position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = (
-            torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)
-        ).exp()
+        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
 
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -40,9 +38,7 @@ class PositionalEmbedding(nn.Module):
 
 
 class InputEmbedding(nn.Module):
-    def __init__(
-        self, num_control_features, num_byproduct_features, num_target_features, dim
-    ):
+    def __init__(self, num_control_features, num_byproduct_features, num_target_features, dim):
         super(InputEmbedding, self).__init__()
         self.num_control_features = num_control_features
         self.num_byproduct_features = num_byproduct_features
@@ -58,19 +54,10 @@ class InputEmbedding(nn.Module):
         control = self.control_embedding(x[:, :, : self.num_control_features])
         control += self.positional_embedding(control)
         # print('control embedding: ', control.shape)
-        byproduct = self.byproduct_embedding(
-            x[
-                :,
-                :,
-                self.num_control_features : self.num_control_features
-                + self.num_byproduct_features,
-            ]
-        )
+        byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
         byproduct += self.positional_embedding(byproduct)
         # print('byproduct embedding: ', byproduct.shape)
-        target = self.target_embedding(
-            x[:, :, self.num_control_features + self.num_byproduct_features :]
-        )
+        target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
         target += self.positional_embedding(target)
         # print('target embedding: ', target.shape)
 
@@ -116,11 +103,7 @@ class Attention(nn.Module):
         self.attend = nn.Softmax(dim=-1)
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
 
-        self.to_out = (
-            nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
-            if project_out
-            else nn.Identity()
-        )
+        self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
@@ -143,12 +126,7 @@ class Transformer(nn.Module):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(
-                            dim,
-                            Attention(
-                                dim, heads=heads, dim_head=dim_head, dropout=dropout
-                            ),
-                        ),
+                        PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
@@ -162,55 +140,28 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(
-        self,
-        look_back=20,
-        dim=512,
-        depth=3,
-        heads=8,
-        fc_dim=2048,
-        dim_head=64,
-        dropout=0.1,
-        emb_dropout=0.1,
-    ):
+    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
-        self.num_all_features = 39
-        self.num_control_features = 9
+        self.num_all_features = 36
+        self.num_control_features = 6
         self.num_pred_features = 30
         self.num_byproduct_features = 27
         self.num_target_features = 3
         self.look_back = look_back
 
-        self.input_embedding = InputEmbedding(
-            self.num_control_features,
-            self.num_byproduct_features,
-            self.num_target_features,
-            dim,
-        )
-        # 絶対位置エンコーディング
-        # self.positional_embedding = PositionalEmbedding(dim)
+        self.input_embedding = InputEmbedding(self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
 
-        # self.pos_embedding = nn.Parameter(torch.randn(1, self.num_pred_features + self.look_back + self.num_control_features, dim))
-        self.pred_token = nn.Parameter(torch.randn(1, self.num_pred_features, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
         self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
 
         self.transformer = Transformer(dim, depth, heads, dim_head, fc_dim, dropout)
 
-        self.generator = nn.Sequential(
-            nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features)
-        )
+        self.generator = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features))
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
-        # x += self.positional_embedding(x)
-
-        # b, _, _ = x.shape
-
-        # pred_tokens = repeat(self.pred_token, '() n d -> b n d', b=b)
-        # x = torch.cat((pred_tokens, x), dim=1)
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -225,7 +176,6 @@ class BaseTransformer(nn.Module):
         x = torch.cat((x, spec_emb_all), dim=1)
         # print(x.shape)
 
-        # x += self.pos_embedding
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)

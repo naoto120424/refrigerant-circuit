@@ -26,10 +26,12 @@ fixed_case_list = {
 
 model_list = {
     "LSTM",
+    "LSTM_input_sensor_first",
+    "LSTM_input_3types",
+    "LSTM_input_flattened",
+    "LSTM_input_individually",
     "BaseTransformer",
     "BaseTransformer_only1pe",
-    "BaseTransformer_cls_pool",
-    "BaseTransformer_only1pe_cls_pool",
     "BaseTransformer_input_sensor_first",
     "BaseTransformer_input_3types",
     "BaseTransformer_input_flattened",
@@ -38,38 +40,36 @@ model_list = {
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
 
 
-def modelDecision(
-    model, look_back, dim, depth, heads, fc_dim, dim_head, dropout, emb_dropout
-):
-    if model == "LSTM":
-        from model.lstm import LSTMClassifier
+def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout, emb_dropout):
+    if "LSTM" in model:
+        if model == "LSTM":
+            from model.lstm.lstm import LSTMClassifier
+        elif model == "LSTM_input_sensor_first":
+            from model.lstm.lstm_input_sensor_first import LSTMClassifier
+        elif model == "LSTM_input_3types":
+            from model.lstm.lstm_input_3types import LSTMClassifier
+        elif model == "LSTM_input_flattened":
+            from model.lstm.lstm_input_flattened import LSTMClassifier
+        elif model == "LSTM_input_individually":
+            from model.lstm.lstm_input_individually import LSTMClassifier
 
-        return LSTMClassifier(num_hidden_units=dim, num_layers=depth, dropout=dropout)
-    elif model == "BaseTransformer":
-        from model.base_transformer import BaseTransformer
-    elif model == "BaseTransformer_only1pe":
-        from model.base_transformer_only1pe import BaseTransformer
-    elif model == "BaseTransformer_cls_pool":
-        from model.base_transformer_cls_pool import BaseTransformer
-    elif model == "BaseTransformer_only1pe_cls_pool":
-        from model.base_transformer_only1pe_cls_pool import BaseTransformer
-    elif model == "BaseTransformer_agent_first":
-        from model.base_transformer_input_sensor_first import BaseTransformer
-    elif model == "BaseTransformer_input_3types":
-        from model.base_transformer_input_3types import BaseTransformer
-    elif model == "BaseTransformer_input_flattened":
-        from model.base_transformer_input_flattened import BaseTransformer
+        return LSTMClassifier(look_back=look_back, num_hidden_units=dim, num_layers=depth, dropout=dropout)
 
-    return BaseTransformer(
-        look_back=look_back,
-        dim=dim,
-        depth=depth,
-        heads=heads,
-        fc_dim=fc_dim,
-        dim_head=dim_head,
-        dropout=dropout,
-        emb_dropout=emb_dropout,
-    )
+    if "BaseTransformer" in model:
+        if model == "BaseTransformer":
+            from model.transformer.base_transformer import BaseTransformer
+        elif model == "BaseTransformer_only1pe":
+            from model.transformer.base_transformer_only1pe import BaseTransformer
+        elif model == "BaseTransformer_agent_first":
+            from model.transformer.base_transformer_input_sensor_first import BaseTransformer
+        elif model == "BaseTransformer_input_3types":
+            from model.transformer.base_transformer_input_3types import BaseTransformer
+        elif model == "BaseTransformer_input_flattened":
+            from model.transformer.base_transformer_input_flattened import BaseTransformer
+
+        return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim, dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
+
+    return
 
 
 def deviceChecker():
