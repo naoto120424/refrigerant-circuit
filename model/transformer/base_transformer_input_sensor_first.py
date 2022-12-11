@@ -124,6 +124,8 @@ class BaseTransformer(nn.Module):
         self.input_embedding = nn.Linear(self.look_back, dim)
         self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
 
+        self.dropout = nn.Dropout(emb_dropout)
+
         self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
 
         self.transformer = Transformer(dim, depth, heads, dim_head, fc_dim, dropout)

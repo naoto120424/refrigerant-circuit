@@ -8,4 +8,6 @@
 /data_plot_fixed/
 /.vscode/
 /model/__pycache__/
+/model/lstm/__pycache__/
+/model/transformer/__pycache__/
 /utils/__pycache__/
