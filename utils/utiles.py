@@ -32,6 +32,7 @@ model_list = {
     "LSTM_input_individually",
     "BaseTransformer",
     "BaseTransformer_only1pe",
+    "BaseTransformer_only1pe_ae",
     "BaseTransformer_input_sensor_first",
     "BaseTransformer_input_sensor_first_only1pe",
     "BaseTransformer_input_3types",
@@ -63,6 +64,8 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
             from model.transformer.base_transformer import BaseTransformer
         elif model == "BaseTransformer_only1pe":
             from model.transformer.base_transformer_only1pe import BaseTransformer
+        elif model == "BaseTransformer_only1pe_ae":
+            from model.transformer.base_transformer_only1pe_ae import BaseTransformer
         elif model == "BaseTransformer_input_sensor_first":
             from model.transformer.base_transformer_input_sensor_first import BaseTransformer
         elif model == "BaseTransformer_input_sensor_first_only1pe":

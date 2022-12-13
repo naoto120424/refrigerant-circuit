@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
-    parser.add_argument("--e_name", type=str, default="Refrigerant Circuit Project")
+    parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Project")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bs", type=int, default=32)
     parser.add_argument("--epoch", type=int, default=100)
@@ -202,7 +202,6 @@ def main():
             for i in range(len(output_feature_name)):
                 if output_feature_name[i] in target_kW:
                     if test_index not in np.arange(0, num_fixed_data):
-                        print(test_index)
                         ade = mean_squared_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
                         fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
                         score_list_dict[output_feature_name[i]]["ade"].append(ade)
@@ -219,7 +218,7 @@ def main():
                 plt.close()
 
         for target in target_kW:
-            for evealuation in ["mse", "mae", "fde"]:
+            for evealuation in ["ade", "fde"]:
                 np_array = np.array(score_list_dict[target][evealuation])
                 mlflow.log_metrics(
                     {
