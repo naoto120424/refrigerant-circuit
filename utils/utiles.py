@@ -8,9 +8,9 @@ import numpy as np
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
 
 score_list_dict = {
-    "ACDS_kW": {"mse": [], "mae": [], "fde": []},
-    "Comp_kW": {"mse": [], "mae": [], "fde": []},
-    "Eva_kW": {"mse": [], "mae": [], "fde": []},
+    "ACDS_kW": {"ade": [], "fde": []},
+    "Comp_kW": {"ade": [], "fde": []},
+    "Eva_kW": {"ade": [], "fde": []},
 }
 
 fixed_case_list = {

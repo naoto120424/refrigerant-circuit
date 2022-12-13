@@ -201,12 +201,12 @@ def main():
 
             for i in range(len(output_feature_name)):
                 if output_feature_name[i] in target_kW:
-                    mse = mean_squared_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
-                    mae = mean_absolute_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
-                    fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
-                    score_list_dict[output_feature_name[i]]["mse"].append(mse)
-                    score_list_dict[output_feature_name[i]]["mae"].append(mae)
-                    score_list_dict[output_feature_name[i]]["fde"].append(fde)
+                    if test_index not in np.arange(0, num_fixed_data):
+                        print(test_index)
+                        ade = mean_squared_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
+                        fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
+                        score_list_dict[output_feature_name[i]]["ade"].append(ade)
+                        score_list_dict[output_feature_name[i]]["fde"].append(fde)
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
                 ax.plot(np.array(gt_output_data)[:, i], color="#e46409", label="gt")
