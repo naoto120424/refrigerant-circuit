@@ -4,6 +4,7 @@ import math
 
 from copy import deepcopy
 from einops import rearrange, repeat
+import matplotlib.pyplot as plt
 
 
 def pair(t):
@@ -23,10 +24,13 @@ class PositionalEmbedding(nn.Module):
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model).float()
         pe.requires_grad = False
+
         position = torch.arange(0, max_len).float().unsqueeze(1)
         div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
+
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
+
         pe = pe.unsqueeze(0)
         self.register_buffer("pe", pe)
 
@@ -35,9 +39,11 @@ class PositionalEmbedding(nn.Module):
 
 
 class AgentEmbedding(nn.Module):
-    def __init__(self, d_model, max_len=5000):
+    def __init__(self, d_model, look_back, num_control_features, max_len=5000):
         super(AgentEmbedding, self).__init__()
         self.d_model = d_model
+        self.look_back = look_back
+        self.num_control_features = num_control_features
         ae = torch.zeros(max_len, d_model).float()
         ae.requires_grad = False
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
@@ -48,10 +54,50 @@ class AgentEmbedding(nn.Module):
         self.register_buffer("ae", ae)
 
     def forward(self, x):
-        num_a = int(x.size(2) / self.d_model)
-        ae = self.ae[:, :, : self.d_model]
-        ae = ae.repeat(num_a, 1, 1)
+        # print(x.shape)
+        ae = self.ae[:, : self.look_back]
+        ae_control_features = self.ae[:, self.look_back : self.look_back + self.num_control_features]
+        num_a = int((x.size(1) - self.num_control_features) / self.look_back)
+        # print(num_a)
+        ae = ae.repeat(1, num_a, 1)
+        ae = torch.cat([ae, ae_control_features], dim=1)
+        # print(ae.shape)
         return ae[:, : x.size(1)]
+
+
+class InputEmbedding(nn.Module):
+    def __init__(self, num_all_features, dim):
+        super(InputEmbedding, self).__init__()
+        self.num_all_features = num_all_features
+
+        self.input_emb_list = clones(nn.Linear(1, dim), self.num_all_features)
+
+        self.positional_embedding = PositionalEmbedding(dim)
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, 2)
+        # print(x.shape)
+        for i, input_embedding in enumerate(self.input_emb_list):
+            if i == 0:
+                input_emb_all = input_embedding(x[:, :, :, i])
+            else:
+                input_emb = input_embedding(x[:, :, :, i])
+                input_emb_all = torch.cat((input_emb_all, input_emb), dim=1)
+        # print(input_emb_all.shape)
+        input_emb_all += self.positional_embedding(input_emb_all)
+        # print('input emb all', input_emb_all.shape)
+
+        """
+        # positional embedding visualization
+        pe = self.positional_embedding(input_emb_all).to("cpu").detach().numpy().copy()
+        print("pe", pe.shape)
+        fig = plt.figure()
+        plt.imshow(pe[0])
+        plt.colorbar()
+        plt.savefig("positional_embedding_input_flattened.png")
+        """
+
+        return input_emb_all
 
 
 class PreNorm(nn.Module):
@@ -114,10 +160,7 @@ class Transformer(nn.Module):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(
-                            dim,
-                            Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout),
-                        ),
+                        PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
@@ -131,7 +174,7 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, look_back, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
         self.num_all_features = 36
@@ -141,9 +184,8 @@ class BaseTransformer(nn.Module):
         self.num_target_features = 3
         self.look_back = look_back
 
-        self.input_embedding = nn.Linear(self.num_all_features, dim)
-        self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
-        self.agent_embedding = AgentEmbedding(dim)
+        self.input_embedding = InputEmbedding(self.num_all_features, dim)
+        self.agent_embedding = AgentEmbedding(dim, self.look_back, self.num_control_features)
 
         self.dropout = nn.Dropout(emb_dropout)
 
@@ -155,8 +197,6 @@ class BaseTransformer(nn.Module):
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
-        x += self.positional_embedding(x)
-        x += self.agent_embedding(x)
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -170,6 +210,17 @@ class BaseTransformer(nn.Module):
 
         x = torch.cat((x, spec_emb_all), dim=1)
 
+        """
+        # agent embedding visualization
+        ae = self.agent_embedding(x).to("cpu").detach().numpy().copy()
+        print("ae", ae.shape)
+        fig = plt.figure()
+        plt.imshow(ae[0])
+        plt.colorbar()
+        plt.savefig("agent_embedding_input_flattened.png")
+        """
+
+        x += self.agent_embedding(x)
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)
