@@ -95,19 +95,19 @@ class InputEmbedding(nn.Module):
         fig = plt.figure()
         plt.imshow(pe[0])
         plt.colorbar()
-        plt.savefig("positional_embedding_input_3types_control.png")
+        plt.savefig("img/positional_embedding_input_3types_control.png")
         pe = self.positional_embedding(byproduct).to("cpu").detach().numpy().copy()
         print("pe byproduct", pe.shape)
         fig = plt.figure()
         plt.imshow(pe[0])
         plt.colorbar()
-        plt.savefig("positional_embedding_input_3types_byproduct.png")
+        plt.savefig("img/positional_embedding_input_3types_byproduct.png")
         pe = self.positional_embedding(target).to("cpu").detach().numpy().copy()
         print("pe target", pe.shape)
         fig = plt.figure()
         plt.imshow(pe[0])
         plt.colorbar()
-        plt.savefig("positional_embedding_input_3types_target.png")
+        plt.savefig("img/positional_embedding_input_3types_target.png")
         """
 
         x = torch.cat([control, byproduct, target], dim=1)
@@ -233,7 +233,7 @@ class BaseTransformer(nn.Module):
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("agent_embedding_input_3types.png")
+        plt.savefig("img/agent_embedding_input_3types.png")
         """
 
         x += self.agent_embedding(x)

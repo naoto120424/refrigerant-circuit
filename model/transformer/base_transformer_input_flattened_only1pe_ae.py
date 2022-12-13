@@ -94,7 +94,7 @@ class InputEmbedding(nn.Module):
         fig = plt.figure()
         plt.imshow(pe[0])
         plt.colorbar()
-        plt.savefig("positional_embedding_input_flattened.png")
+        plt.savefig("img/positional_embedding_input_flattened.png")
         """
 
         return input_emb_all
@@ -217,7 +217,7 @@ class BaseTransformer(nn.Module):
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("agent_embedding_input_flattened.png")
+        plt.savefig("img/agent_embedding_input_flattened.png")
         """
 
         x += self.agent_embedding(x)
