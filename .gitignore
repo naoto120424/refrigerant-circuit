@@ -7,6 +7,8 @@
 /data_plot/
 /data_plot_fixed/
 /.vscode/
+/sasaguchi/
+/AgentFormer/
 /model/__pycache__/
 /model/lstm/__pycache__/
 /model/transformer/__pycache__/
