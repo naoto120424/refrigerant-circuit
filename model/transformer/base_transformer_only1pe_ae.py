@@ -156,6 +156,7 @@ class BaseTransformer(nn.Module):
     def forward(self, input, spec):
         x = self.input_embedding(input)
         x += self.positional_embedding(x)
+        x += self.agent_embedding(x)
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -169,7 +170,6 @@ class BaseTransformer(nn.Module):
 
         x = torch.cat((x, spec_emb_all), dim=1)
 
-        x += self.agent_embedding(x)
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)
