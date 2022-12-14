@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import math
+import matplotlib.pyplot as plt
 
 from copy import deepcopy
 from einops import rearrange, repeat
@@ -91,7 +92,7 @@ class InputEmbedding(nn.Module):
         target += self.positional_embedding(target)
         # print('target embedding: ', target.shape)
 
-        """
+        """     
         # positional embedding visualization
         pe = self.positional_embedding(control).to("cpu").detach().numpy().copy()
         print("pe control", pe.shape)

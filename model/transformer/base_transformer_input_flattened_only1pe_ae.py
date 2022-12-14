@@ -1,10 +1,10 @@
 import torch
 from torch import nn
 import math
+import matplotlib.pyplot as plt
 
 from copy import deepcopy
 from einops import rearrange, repeat
-import matplotlib.pyplot as plt
 
 
 def pair(t):
