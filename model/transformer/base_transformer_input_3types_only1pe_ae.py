@@ -55,11 +55,12 @@ class AgentEmbedding(nn.Module):
     def forward(self, x):
         # print(x.shape)
         ae = self.ae[:, : self.look_back]
-        ae_control_features = self.ae[:, self.look_back : self.look_back + self.num_control_features]
-        num_a = int((x.size(1) - self.num_control_features) / self.look_back)
+        # ae_control_features = self.ae[:, self.look_back : self.look_back + self.num_control_features]
+        # num_a = int((x.size(1) - self.num_control_features) / self.look_back)
+        num_a = int(x.size(1) / self.look_back)
         # print(num_a)
         ae = ae.repeat(1, num_a, 1)
-        ae = torch.cat([ae, ae_control_features], dim=1)
+        # ae = torch.cat([ae, ae_control_features], dim=1)
         # print(ae.shape)
         return ae[:, : x.size(1)]
 
@@ -212,6 +213,7 @@ class BaseTransformer(nn.Module):
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
+        x += self.agent_embedding(x)
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -236,7 +238,6 @@ class BaseTransformer(nn.Module):
         plt.savefig("img/agent_embedding_input_3types.png")
         """
 
-        x += self.agent_embedding(x)
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)

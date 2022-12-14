@@ -57,10 +57,11 @@ class AgentEmbedding(nn.Module):
         # print(x.shape)
         ae = self.ae[:, : self.look_back]
         ae_control_features = self.ae[:, self.look_back : self.look_back + self.num_control_features]
-        num_a = int((x.size(1) - self.num_control_features) / self.look_back)
+        # num_a = int((x.size(1) - self.num_control_features) / self.look_back)
+        num_a = int(x.size(1) / self.look_back)
         # print(num_a)
         ae = ae.repeat(1, num_a, 1)
-        ae = torch.cat([ae, ae_control_features], dim=1)
+        # ae = torch.cat([ae, ae_control_features], dim=1)
         # print(ae.shape)
         return ae[:, : x.size(1)]
 
@@ -197,6 +198,17 @@ class BaseTransformer(nn.Module):
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
+        x += self.agent_embedding(x)
+
+        """
+        # agent embedding visualization
+        ae = self.agent_embedding(x).to("cpu").detach().numpy().copy()
+        print("ae", ae.shape)
+        fig = plt.figure()
+        plt.imshow(ae[0])
+        plt.colorbar()
+        plt.savefig("img/agent_embedding_input_flattened.png")
+        """
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -210,17 +222,6 @@ class BaseTransformer(nn.Module):
 
         x = torch.cat((x, spec_emb_all), dim=1)
 
-        """
-        # agent embedding visualization
-        ae = self.agent_embedding(x).to("cpu").detach().numpy().copy()
-        print("ae", ae.shape)
-        fig = plt.figure()
-        plt.imshow(ae[0])
-        plt.colorbar()
-        plt.savefig("img/agent_embedding_input_flattened.png")
-        """
-
-        x += self.agent_embedding(x)
         x = self.dropout(x)
         x = self.transformer(x)
         x = x.mean(dim=1)
