@@ -83,41 +83,27 @@ class InputEmbedding(nn.Module):
 
     def forward(self, x):
         control = self.control_embedding(x[:, :, : self.num_control_features])
-        control += self.positional_embedding(control)
+        # control += self.positional_embedding(control)
         # print('control embedding: ', control.shape)
         byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
-        byproduct += self.positional_embedding(byproduct)
+        # byproduct += self.positional_embedding(byproduct)
         # print('byproduct embedding: ', byproduct.shape)
         target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
-        target += self.positional_embedding(target)
+        # target += self.positional_embedding(target)
         # print('target embedding: ', target.shape)
 
-        """     
+        x = torch.cat([control, byproduct, target], dim=1)
+        x += self.positional_embedding(x)
+        x += self.agent_embedding(x)
+
+        """
         # positional embedding visualization
-        pe = self.positional_embedding(control).to("cpu").detach().numpy().copy()
+        pe = self.positional_embedding(x).to("cpu").detach().numpy().copy()
         print("pe control", pe.shape)
         fig = plt.figure()
         plt.imshow(pe[0])
         plt.colorbar()
-        plt.savefig("img/positional_embedding_input_3types_control.png")
-        pe = self.positional_embedding(byproduct).to("cpu").detach().numpy().copy()
-        print("pe byproduct", pe.shape)
-        fig = plt.figure()
-        plt.imshow(pe[0])
-        plt.colorbar()
-        plt.savefig("img/positional_embedding_input_3types_byproduct.png")
-        pe = self.positional_embedding(target).to("cpu").detach().numpy().copy()
-        print("pe target", pe.shape)
-        fig = plt.figure()
-        plt.imshow(pe[0])
-        plt.colorbar()
-        plt.savefig("img/positional_embedding_input_3types_target.png")
-        """
-
-        x = torch.cat([control, byproduct, target], dim=1)
-        x += self.agent_embedding(x)
-
-        """
+        plt.savefig("img/positional_embedding_input_3types.png")
         # agent embedding visualization
         ae = self.agent_embedding(x).to("cpu").detach().numpy().copy()
         print("ae", ae.shape)
