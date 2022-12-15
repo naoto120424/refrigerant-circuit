@@ -66,7 +66,7 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
         elif model == "BaseTransformer_only1pe":
             from model.transformer.base_transformer_only1pe import BaseTransformer
         elif model == "BaseTransformer_input_sensor_first":
-            from model.transformer.base_transformer_input_sensor_first_only1pe import BaseTransformer  # model.transformer.base_transformer_input_sensor_first
+            from model.transformer.base_transformer_input_sensor_first import BaseTransformer
         elif model == "BaseTransformer_input_sensor_first_only1pe":
             from model.transformer.base_transformer_input_sensor_first_only1pe import BaseTransformer
         elif model == "BaseTransformer_input_3types":
