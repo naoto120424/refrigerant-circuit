@@ -18,9 +18,9 @@ def clones(module, n):
 
 
 # classes
-class PositionalEmbedding(nn.Module):
+class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=5000):
-        super(PositionalEmbedding, self).__init__()
+        super(PositionalEncoding, self).__init__()
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model).float()
         pe.requires_grad = False
@@ -38,9 +38,9 @@ class PositionalEmbedding(nn.Module):
         return self.pe[:, : x.size(1)]
 
 
-class AgentEmbedding(nn.Module):
+class AgentEncoding(nn.Module):
     def __init__(self, d_model, look_back, num_control_features, max_len=5000):
-        super(AgentEmbedding, self).__init__()
+        super(AgentEncoding, self).__init__()
         self.d_model = d_model
         self.look_back = look_back
         self.num_control_features = num_control_features
@@ -75,8 +75,8 @@ class InputEmbedding(nn.Module):
 
         self.input_emb_list = clones(nn.Linear(1, dim), self.num_all_features)
 
-        self.positional_embedding = PositionalEmbedding(dim)
-        self.agent_embedding = AgentEmbedding(dim, self.look_back, self.num_control_features)
+        self.positional_encoding = PositionalEncoding(dim)
+        self.agent_encoding = AgentEncoding(dim, self.look_back, self.num_control_features)
 
     def forward(self, x):
         x = torch.unsqueeze(x, 2)
@@ -88,26 +88,26 @@ class InputEmbedding(nn.Module):
                 input_emb = input_embedding(x[:, :, :, i])
                 input_emb_all = torch.cat((input_emb_all, input_emb), dim=1)
         # print(input_emb_all.shape)
-        input_emb_all += self.positional_embedding(input_emb_all)
+        input_emb_all += self.positional_encoding(input_emb_all)
         # print('input emb all', input_emb_all.shape)
-        input_emb_all += self.agent_embedding(input_emb_all)
+        input_emb_all += self.agent_encoding(input_emb_all)
 
         """
-        # positional embedding visualization
-        pe = self.positional_embedding(input_emb_all).to("cpu").detach().numpy().copy()
+        # positional encoding visualization
+        pe = self.positional_encoding(input_emb_all).to("cpu").detach().numpy().copy()
         print("pe", pe.shape)
         fig = plt.figure()
         plt.imshow(pe[0])
         plt.colorbar()
-        plt.savefig("img/positional_embedding_input_flattened.png")
+        plt.savefig("img/positional_encoding_input_flattened.png")
         
-        # agent embedding visualization
-        ae = self.agent_embedding(input_emb_all).to("cpu").detach().numpy().copy()
+        # agent encoding visualization
+        ae = self.agent_encoding(input_emb_all).to("cpu").detach().numpy().copy()
         print("ae", ae.shape)
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("img/agent_embedding_input_flattened.png")
+        plt.savefig("img/agent_encoding_input_flattened.png")
         """
 
         return input_emb_all
