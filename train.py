@@ -206,6 +206,11 @@ def main():
                         fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
                         score_list_dict[output_feature_name[i]]["ade"].append(ade)
                         score_list_dict[output_feature_name[i]]["fde"].append(fde)
+                    else:
+                        ade = mean_absolute_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
+                        fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
+                        test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
+                        test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
                 fig = plt.figure()
                 ax = fig.add_subplot(1, 1, 1)
                 ax.plot(np.array(gt_output_data)[:, i], color="#e46409", label="gt")
@@ -219,13 +224,22 @@ def main():
 
         for target in target_kW:
             for evealuation in ["ade", "fde"]:
-                np_array = np.array(score_list_dict[target][evealuation])
+                np_array1 = np.array(score_list_dict[target][evealuation])
                 mlflow.log_metrics(
                     {
-                        f"{target}_{evealuation.upper()}_max": np.max(np_array),
-                        f"{target}_{evealuation.upper()}_min": np.min(np_array),
-                        f"{target}_{evealuation.upper()}_mean": np.mean(np_array),
-                        f"{target}_{evealuation.upper()}_median": np.median(np_array),
+                        f"{target}_{evealuation.upper()}_max": np.max(np_array1),
+                        f"{target}_{evealuation.upper()}_min": np.min(np_array1),
+                        f"{target}_{evealuation.upper()}_mean": np.mean(np_array1),
+                        f"{target}_{evealuation.upper()}_median": np.median(np_array1),
+                    }
+                )
+                np_array2 = np.array(test_score_list_dict[target][evealuation])
+                mlflow.log_metrics(
+                    {
+                        f"test_{target}_{evealuation.upper()}_max": np.max(np_array2),
+                        f"test_{target}_{evealuation.upper()}_min": np.min(np_array2),
+                        f"test_{target}_{evealuation.upper()}_mean": np.mean(np_array2),
+                        f"test_{target}_{evealuation.upper()}_median": np.median(np_array2),
                     }
                 )
 
