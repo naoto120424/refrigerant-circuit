@@ -32,14 +32,18 @@ model_list = {
     "LSTM_input_individually",
     "BaseTransformer",
     "BaseTransformer_only1pe",
+    "BaseTransformer_only1pe_aete",
     "BaseTransformer_input_sensor_first",
     "BaseTransformer_input_sensor_first_only1pe",
+    "BaseTransformer_input_sensor_first_no_pe",
     "BaseTransformer_input_3types",
     "BaseTransformer_input_3types_only1pe",
     "BaseTransformer_input_3types_only1pe_ae",
+    "BaseTransformer_input_3types_only1pe_aete",
     "BaseTransformer_input_flattened",
     "BaseTransformer_input_flattened_only1pe",
     "BaseTransformer_input_flattened_only1pe_ae",
+    "BaseTransformer_input_flattened_only1pe_aete",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -65,22 +69,30 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
             from model.transformer.base_transformer import BaseTransformer
         elif model == "BaseTransformer_only1pe":
             from model.transformer.base_transformer_only1pe import BaseTransformer
+        elif model == "BaseTransformer_only1pe_aete":
+            from model.transformer.base_transformer_only1pe_aete import BaseTransformer
         elif model == "BaseTransformer_input_sensor_first":
             from model.transformer.base_transformer_input_sensor_first import BaseTransformer
         elif model == "BaseTransformer_input_sensor_first_only1pe":
             from model.transformer.base_transformer_input_sensor_first_only1pe import BaseTransformer
+        elif model == "BaseTransformer_input_sensor_first_no_pe":
+            from model.transformer.base_transformer_input_sensor_first_no_pe import BaseTransformer
         elif model == "BaseTransformer_input_3types":
             from model.transformer.base_transformer_input_3types import BaseTransformer
         elif model == "BaseTransformer_input_3types_only1pe":
             from model.transformer.base_transformer_input_3types_only1pe import BaseTransformer
         elif model == "BaseTransformer_input_3types_only1pe_ae":
             from model.transformer.base_transformer_input_3types_only1pe_ae import BaseTransformer
+        elif model == "BaseTransformer_input_3types_only1pe_aete":
+            from model.transformer.base_transformer_input_3types_only1pe_aete import BaseTransformer
         elif model == "BaseTransformer_input_flattened":
             from model.transformer.base_transformer_input_flattened import BaseTransformer
         elif model == "BaseTransformer_input_flattened_only1pe":
             from model.transformer.base_transformer_input_flattened_only1pe import BaseTransformer
         elif model == "BaseTransformer_input_flattened_only1pe_ae":
             from model.transformer.base_transformer_input_flattened_only1pe_ae import BaseTransformer
+        elif model == "BaseTransformer_input_flattened_only1pe_aete":
+            from model.transformer.base_transformer_input_flattened_only1pe_aete import BaseTransformer
 
         return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim, dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
 
