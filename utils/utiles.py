@@ -7,6 +7,8 @@ import numpy as np
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
 
+predict_time_list = []
+
 score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": []},
     "Comp_kW": {"ade": [], "fde": []},
@@ -46,10 +48,12 @@ model_list = {
     "BaseTransformer_input_3types_only1pe",
     "BaseTransformer_input_3types_ae",
     "BaseTransformer_input_3types_aete",
+    "BaseTransformer_input_3types_AgentAwareAttention",
     "BaseTransformer_input_flattened",
     "BaseTransformer_input_flattened_only1pe",
     "BaseTransformer_input_flattened_ae",
     "BaseTransformer_input_flattened_aete",
+    "BaseTransformer_input_flattened_AgentAwareAttention",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -91,6 +95,8 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
             from model.transformer.base_transformer_input_3types_only1pe_ae import BaseTransformer
         elif model == "BaseTransformer_input_3types_aete":
             from model.transformer.base_transformer_input_3types_aete import BaseTransformer
+        elif model == "BaseTransformer_input_3types_AgentAwareAttention":
+            from model.transformer.base_transformer_input_3types_AgentAwareAttention import BaseTransformer
         elif model == "BaseTransformer_input_flattened":
             from model.transformer.base_transformer_input_flattened import BaseTransformer
         elif model == "BaseTransformer_input_flattened_only1pe":
@@ -99,6 +105,8 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
             from model.transformer.base_transformer_input_flattened_only1pe_ae import BaseTransformer
         elif model == "BaseTransformer_input_flattened_aete":
             from model.transformer.base_transformer_input_flattened_aete import BaseTransformer
+        elif model == "BaseTransformer_input_flattened_AgentAwareAttention":
+            from model.transformer.base_transformer_input_flattened_AgentAwareAttention import BaseTransformer
 
         return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim, dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
 

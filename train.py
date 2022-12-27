@@ -5,6 +5,8 @@ import numpy as np
 import mlflow
 import shutil
 import argparse
+import time
+import datetime
 from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
@@ -13,7 +15,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
-    parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Project")
+    parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bs", type=int, default=32)
     parser.add_argument("--epoch", type=int, default=100)
@@ -105,6 +107,7 @@ def main():
     print(f"Batch Size  : {args.bs}")
     print(f"train case  : {len(train_index_list)}")
     print(f"val case    : {len(val_index_list)}")
+    train_start_time = time.perf_counter()
     for epoch in range(1, epoch_num + 1):
         print("----------------------------------------------")
         print(f"[Epoch {epoch}/{epoch_num}]")
@@ -151,13 +154,15 @@ def main():
             model_path = os.path.join(result_path, "best_model.pth")
             torch.save(model.state_dict(), model_path)
     mlflow.log_metric(f"best epoch num", best_epoch_num)
+    train_end_time = time.perf_counter()
+    train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))
+    mlflow.log_metric(f"train time", train_end_time - train_start_time)
 
     print("----------------------------------------------")
+    print(f"Train Time: {train_time}")
 
     with torch.no_grad():
-        print("\n\nTest Start")
-        print("----------------------------------------------")
-        print(f"Test Case: {len(test_index_list)}")
+        print(f"\n\nTest Start. Case Num: {len(test_index_list)}")
         print("----------------------------------------------")
         model.load_state_dict(torch.load(model_path))
         model.eval()
@@ -179,12 +184,15 @@ def main():
             for i in range(scaling_spec_data.shape[1]):
                 scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
 
+            start_time = time.perf_counter()
             for i in range(scaling_spec_data.shape[0]):
                 input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 scaling_pred_data = model(input, spec).detach().to("cpu").numpy().copy()[0]
                 new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
                 scaling_input_data = np.concatenate([scaling_input_data, new_scaling_input_data], axis=0)
+            end_time = time.perf_counter()
+            predict_time_list.append(end_time - start_time)
 
             pred_data = scaling_input_data.copy()
             for i in range(scaling_input_data.shape[1]):
@@ -224,29 +232,31 @@ def main():
 
         for target in target_kW:
             for evealuation in ["ade", "fde"]:
-                np_array1 = np.array(score_list_dict[target][evealuation])
+                np_array = np.array(score_list_dict[target][evealuation])
+                np_array_test = np.array(test_score_list_dict[target][evealuation])
                 mlflow.log_metrics(
                     {
-                        f"{target}_{evealuation.upper()}_max": np.max(np_array1),
-                        f"{target}_{evealuation.upper()}_min": np.min(np_array1),
-                        f"{target}_{evealuation.upper()}_mean": np.mean(np_array1),
-                        f"{target}_{evealuation.upper()}_median": np.median(np_array1),
+                        f"{target}_{evealuation.upper()}_max": np.max(np_array),
+                        f"{target}_{evealuation.upper()}_min": np.min(np_array),
+                        f"{target}_{evealuation.upper()}_mean": np.mean(np_array),
+                        f"{target}_{evealuation.upper()}_median": np.median(np_array),
                     }
                 )
-                np_array2 = np.array(test_score_list_dict[target][evealuation])
                 mlflow.log_metrics(
                     {
-                        f"test_{target}_{evealuation.upper()}_max": np.max(np_array2),
-                        f"test_{target}_{evealuation.upper()}_min": np.min(np_array2),
-                        f"test_{target}_{evealuation.upper()}_mean": np.mean(np_array2),
-                        f"test_{target}_{evealuation.upper()}_median": np.median(np_array2),
+                        f"test_{target}_{evealuation.upper()}_max": np.max(np_array_test),
+                        f"test_{target}_{evealuation.upper()}_min": np.min(np_array_test),
+                        f"test_{target}_{evealuation.upper()}_mean": np.mean(np_array_test),
+                        f"test_{target}_{evealuation.upper()}_median": np.median(np_array_test),
                     }
                 )
 
+    mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))
     mlflow.log_artifacts(local_dir=result_path, artifact_path="result")
     shutil.rmtree(result_path)
     mlflow.end_run()
-    print("----------------------------------------------")
+    print(f"Predict Time: {np.mean(predict_time_list)} [s]")
+    print("----------------------------------------------\n")
     print("Experiment End")
 
 
