@@ -161,11 +161,11 @@ class AgentAwareAttention(nn.Module):
 
         attn_mask = torch.eye(self.num_agent)
         attn_mask = attn_mask.repeat_interleave(self.look_back, dim=1)
-        attn_mask = attn_mask.repeat(self.look_back, 1)
+        attn_mask = attn_mask.repeat_interleave(self.look_back, dim=0)
         attn_mask = torch.cat([attn_mask, torch.zeros(attn_mask.size(0), self.num_control_features)], dim=1)
         attn_mask = torch.cat([attn_mask, torch.zeros(self.num_control_features, attn_mask.size(1))], dim=0)
         self.attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
-        # print(attn_mask.shape)
+        # print(attn_mask)
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
