@@ -28,7 +28,7 @@ def main():
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--emb_dropout", type=float, default=0.1)
     parser.add_argument("--debug", type=bool, default=False)
-    parser.add_argument("--model", type=str, default="BaseTransformer")
+    parser.add_argument("--model", type=str, default="BaseTransformer_only1pe")
     parser.add_argument("--criterion", type=str, default="MSE")
     args = parser.parse_args()
 
@@ -64,15 +64,20 @@ def main():
     num_fixed_data = 8
     num_control_features = 6
 
-    train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
-    train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
-    test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+    if args.debug:
+        train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, num_fixed_data + 20), test_size=5)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=5)
+        test_index_list = np.append(test_index_list, np.arange(0, 2))
+    else:
+        train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
+        test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
 
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=False)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
 
     if args.model in model_list:
         model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
@@ -89,7 +94,7 @@ def main():
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
-    best_loss = 1000.0
+    best_loss = 100.0
     print("\n\nTrain Start")
     print("----------------------------------------------")
     print(f"Device      : {str.upper(device)}")
@@ -171,8 +176,11 @@ def main():
                 case_name = list(fixed_case_list)[test_index]
             else:
                 case_name = f"case{str(test_index-num_fixed_data+1).zfill(4)}"
-            case_path = os.path.join(result_path, "img", case_name)
-            os.makedirs(case_path, exist_ok=True)
+            img_path = os.path.join(result_path, "img")
+            os.makedirs(img_path, exist_ok=True)
+
+            output_feature_name = data["feature_name"][num_control_features + 1 :]
+            output_feature_unit = data["feature_unit"][num_control_features + 1 :]
             inp_data = data["inp"][test_index]
             spec_data = data["spec"][test_index]
             gt_data = data["gt"][test_index]
@@ -198,82 +206,30 @@ def main():
             for i in range(scaling_input_data.shape[1]):
                 pred_data[:, i] = pred_data[:, i] * std_list[i] + mean_list[i]
             pred_output_data = pred_data[:, num_control_features:]
+            scaling_pred_output_data = scaling_input_data[:, num_control_features:]
 
-            output_feature_name = data["feature_name"][num_control_features + 1 :]
-            output_feature_unit = data["feature_unit"][num_control_features + 1 :]
             gt_output_data = []
             for inp in inp_data[0]:
                 gt_output_data.append(inp[num_control_features:])
             for gt in gt_data:
                 gt_output_data.append(gt)
 
-            for i in range(len(output_feature_name)):
-                if output_feature_name[i] in target_kW:
-                    if test_index not in np.arange(0, num_fixed_data):
-                        ade = mean_absolute_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
-                        fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
-                        score_list_dict[output_feature_name[i]]["ade"].append(ade)
-                        score_list_dict[output_feature_name[i]]["fde"].append(fde)
-                    else:
-                        ade = mean_absolute_error(np.array(gt_output_data)[:, i], np.array(pred_output_data)[:, i])
-                        fde = abs(gt_output_data[-1][i] - pred_output_data[-1][i])
-                        test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
-                        test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
-                fig = plt.figure()
-                ax = fig.add_subplot(1, 1, 1)
-                ax.plot(np.array(gt_output_data)[:, i], color="#e46409", label="gt")
-                ax.plot(np.array(pred_output_data)[:, i], color="b", label="pred")
-                ax.set_title(case_name)
-                ax.set_xlabel("Time[s]")
-                ax.set_ylabel(f"{output_feature_name[i]}[{output_feature_unit[i]}]")
-                ax.legend(loc="best")
-                plt.savefig(os.path.join(case_path, f"{output_feature_name[i]}.png"))
-                plt.close()
+            scaling_gt_output_data = np.zeros(np.array(gt_output_data).shape)
+            for i in range(np.array(gt_output_data).shape[1]):
+                scaling_gt_output_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 
-        for target in target_kW:
-            for evaluation in ["ade", "fde"]:
-                np_array = np.array(score_list_dict[target][evaluation])
-                np_array_test = np.array(test_score_list_dict[target][evaluation])
-                mlflow.log_metrics(
-                    {
-                        f"{target}_{evaluation.upper()}_max": np.max(np_array),
-                        f"{target}_{evaluation.upper()}_min": np.min(np_array),
-                        f"{target}_{evaluation.upper()}_mean": np.mean(np_array),
-                        f"{target}_{evaluation.upper()}_median": np.median(np_array),
-                    }
-                )
-                mlflow.log_metrics(
-                    {
-                        f"test_{target}_{evaluation.upper()}_max": np.max(np_array_test),
-                        f"test_{target}_{evaluation.upper()}_min": np.min(np_array_test),
-                        f"test_{target}_{evaluation.upper()}_mean": np.mean(np_array_test),
-                        f"test_{target}_{evaluation.upper()}_median": np.median(np_array_test),
-                    }
-                )
-                """
-                evaluation_path = os.path.join(result_path, "evaluation")
-                os.makedirs(evaluation_path, exist_ok=True)
-                f = open(os.path.join(evaluation_path, f"{target}_{evaluation.upper()}.txt"), "w")
-                f.write(f"max: {np.max(np_array)}")
-                f.write(f"min: {np.min(np_array)}")
-                f.write(f"mean: {np.mean(np_array)}")
-                f.write(f"median: {np.median(np_array)}")
-                f.close()
-                f = open(os.path.join(evaluation_path, f"test_{target}_{evaluation.upper()}.txt"), "w")
-                f.write(f"max: {np.max(np_array_test)}")
-                f.write(f"min: {np.min(np_array_test)}")
-                f.write(f"mean: {np.mean(np_array_test)}")
-                f.write(f"median: {np.median(np_array_test)}")
-                f.close()
-                """
+            evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data)
+            visualization(scaling_gt_output_data, scaling_pred_output_data, output_feature_name, output_feature_unit, case_name, img_path, is_normalized=True)
+            visualization(gt_output_data, pred_output_data, output_feature_name, output_feature_unit, case_name, img_path)
 
+    save_evaluation(result_path)
     mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))
     mlflow.log_artifacts(local_dir=result_path, artifact_path="result")
     shutil.rmtree(result_path)
     mlflow.end_run()
-    print(f"Predict Time: {np.mean(predict_time_list)} [s]")
-    print("----------------------------------------------\n")
-    print("Experiment End")
+    print("----------------------------------------------")
+    print(f"Predict Time: {np.mean(predict_time_list)} [s]\n")
+    print("Experiment End\n")
 
 
 if __name__ == "__main__":
