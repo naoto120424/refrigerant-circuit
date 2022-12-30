@@ -160,6 +160,6 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     # print(data["inp"].shape)
     # print(data["spec"].shape)
     # print(data["gt"].shape)
-    # print("----------------------------------------------")
+    print("----------------------------------------------")
 
     return MazdaDataset(data), mean_list, std_list
