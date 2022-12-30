@@ -231,25 +231,41 @@ def main():
                 plt.close()
 
         for target in target_kW:
-            for evealuation in ["ade", "fde"]:
-                np_array = np.array(score_list_dict[target][evealuation])
-                np_array_test = np.array(test_score_list_dict[target][evealuation])
+            for evaluation in ["ade", "fde"]:
+                np_array = np.array(score_list_dict[target][evaluation])
+                np_array_test = np.array(test_score_list_dict[target][evaluation])
                 mlflow.log_metrics(
                     {
-                        f"{target}_{evealuation.upper()}_max": np.max(np_array),
-                        f"{target}_{evealuation.upper()}_min": np.min(np_array),
-                        f"{target}_{evealuation.upper()}_mean": np.mean(np_array),
-                        f"{target}_{evealuation.upper()}_median": np.median(np_array),
+                        f"{target}_{evaluation.upper()}_max": np.max(np_array),
+                        f"{target}_{evaluation.upper()}_min": np.min(np_array),
+                        f"{target}_{evaluation.upper()}_mean": np.mean(np_array),
+                        f"{target}_{evaluation.upper()}_median": np.median(np_array),
                     }
                 )
                 mlflow.log_metrics(
                     {
-                        f"test_{target}_{evealuation.upper()}_max": np.max(np_array_test),
-                        f"test_{target}_{evealuation.upper()}_min": np.min(np_array_test),
-                        f"test_{target}_{evealuation.upper()}_mean": np.mean(np_array_test),
-                        f"test_{target}_{evealuation.upper()}_median": np.median(np_array_test),
+                        f"test_{target}_{evaluation.upper()}_max": np.max(np_array_test),
+                        f"test_{target}_{evaluation.upper()}_min": np.min(np_array_test),
+                        f"test_{target}_{evaluation.upper()}_mean": np.mean(np_array_test),
+                        f"test_{target}_{evaluation.upper()}_median": np.median(np_array_test),
                     }
                 )
+                """
+                evaluation_path = os.path.join(result_path, "evaluation")
+                os.makedirs(evaluation_path, exist_ok=True)
+                f = open(os.path.join(evaluation_path, f"{target}_{evaluation.upper()}.txt"), "w")
+                f.write(f"max: {np.max(np_array)}")
+                f.write(f"min: {np.min(np_array)}")
+                f.write(f"mean: {np.mean(np_array)}")
+                f.write(f"median: {np.median(np_array)}")
+                f.close()
+                f = open(os.path.join(evaluation_path, f"test_{target}_{evaluation.upper()}.txt"), "w")
+                f.write(f"max: {np.max(np_array_test)}")
+                f.write(f"min: {np.min(np_array_test)}")
+                f.write(f"mean: {np.mean(np_array_test)}")
+                f.write(f"median: {np.median(np_array_test)}")
+                f.close()
+                """
 
     mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))
     mlflow.log_artifacts(local_dir=result_path, artifact_path="result")

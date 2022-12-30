@@ -3,6 +3,8 @@ import torch.nn as nn
 import random
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
@@ -110,6 +112,38 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
 
         return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim, dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
 
+    return
+
+
+def visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, case_path, is_normalized=False):
+    for i in range(len(output_feature_name)):
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(np.array(gt_array)[:, i], color="#e46409", label="gt")
+        ax.plot(np.array(pred_array)[:, i], color="b", label="pred")
+        ax.set_title(case_name)
+        ax.set_xlabel("Time[s]")
+        ax.set_ylabel(f"{output_feature_name[i]}[{output_feature_unit[i]}]")
+        ax.legend(loc="best")
+        plt.savefig(os.path.join(case_path, f"{output_feature_name[i]}.png"))
+        plt.close()
+    return
+
+
+def evaluation(result_path, case_path, case_name, test_index, gt_array, pred_array, output_feature_name, output_feature_unit, num_fixed_data=8):
+    for i in range(len(output_feature_name)):
+        if output_feature_name[i] in target_kW:
+            if test_index not in np.arange(0, num_fixed_data):
+                ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
+                fde = abs(gt_array[-1][i] - pred_array[-1][i])
+                score_list_dict[output_feature_name[i]]["ade"].append(ade)
+                score_list_dict[output_feature_name[i]]["fde"].append(fde)
+            else:
+                ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
+                fde = abs(gt_array[-1][i] - pred_array[-1][i])
+                test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
+                test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
+    visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, case_path)
     return
 
 
