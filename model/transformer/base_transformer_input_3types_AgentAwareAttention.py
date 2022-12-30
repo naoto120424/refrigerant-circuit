@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import math
 import matplotlib.pyplot as plt
+import os
+import numpy as np
 
 from copy import deepcopy
 from einops import rearrange, repeat
@@ -100,20 +102,22 @@ class InputEmbedding(nn.Module):
         x += self.time_encoding(x)
 
         """
+        img_path = os.path.join("img", "inp_3types", "encoding")
+        os.makedirs(img_path, exist_ok=True)
         # time encoding visualization
         te = self.time_encoding(x).to("cpu").detach().numpy().copy()
         print("te", te.shape)
         fig = plt.figure()
         plt.imshow(te[0])
         plt.colorbar()
-        plt.savefig("img/time_encoding_input_3types.png")
+        plt.savefig("img/inp_3types/encoding/time_encoding_input_3types.png")
         # agent encoding visualization
         ae = self.agent_encoding(x).to("cpu").detach().numpy().copy()
         print("ae", ae.shape)
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("img/agent_encoding_input_3types.png")
+        plt.savefig("img/inp_3types/encoding/agent_encoding_input_3types.png")
         """
 
         return x
@@ -145,12 +149,13 @@ class FeedForward(nn.Module):
 
 
 class AgentAwareAttention(nn.Module):
-    def __init__(self, dim, num_agent=200, look_back=20, num_control_features=9, heads=20, dim_head=1600, dropout=0.1):
+    def __init__(self, dim, num_agent=200, look_back=20, num_control_features=9, heads=20, dim_head=1600, dropout=0.1, i=0):
         super().__init__()
         self.num_agent = num_agent
         self.num_control_features = num_control_features
         self.look_back = look_back
         inner_dim = dim_head * heads
+        self.i = i
         project_out = not (heads == 1 and dim_head == dim)
 
         self.heads = heads
@@ -168,7 +173,15 @@ class AgentAwareAttention(nn.Module):
         attn_mask = torch.cat([attn_mask, torch.zeros(attn_mask.size(0), self.num_control_features)], dim=1)
         attn_mask = torch.cat([attn_mask, torch.zeros(self.num_control_features, attn_mask.size(1))], dim=0)
         self.attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
-        # print(attn_mask)
+
+        """
+        img_path = os.path.join("img", "inp_3types", "attention")
+        os.makedirs(img_path, exist_ok=True)
+        fig = plt.figure()
+        plt.imshow(attn_mask, cmap="Blues")
+        plt.colorbar()
+        plt.savefig("img/inp_3types/attention/attention_mask_input_3types.png")
+        """
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
@@ -188,6 +201,19 @@ class AgentAwareAttention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
+
+        """
+        attn_img = attn.detach().to("cpu").numpy().copy()[0]
+        img_path = os.path.join("img", "inp_3types", "attention", str(self.i + 1))
+        os.makedirs(img_path, exist_ok=True)
+        for j in range(self.heads):
+            fig = plt.figure()
+            plt.imshow(np.array(attn_img[j, :, :]), cmap="Reds")
+            plt.colorbar()
+            plt.savefig(f"img/inp_3types/attention/{self.i + 1}/attention_heads{j+1}.png")
+            plt.close()
+        """
+
         return self.to_out(out)
 
 
@@ -222,11 +248,11 @@ class Transformer(nn.Module):
     def __init__(self, dim, num_agent, look_back, num_control_features, depth, heads, dim_head, fc_dim, dropout=0.1):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for _ in range(depth):
+        for i in range(depth):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(dim, AgentAwareAttention(dim, num_agent, look_back, num_control_features, heads=heads, dim_head=dim_head, dropout=dropout)),
+                        PreNorm(dim, AgentAwareAttention(dim, num_agent, look_back, num_control_features, heads=heads, dim_head=dim_head, dropout=dropout, i=i)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
