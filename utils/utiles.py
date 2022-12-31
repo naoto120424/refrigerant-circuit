@@ -5,7 +5,7 @@ import os
 import numpy as np
 import mlflow
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_absolute_error
 
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
@@ -113,14 +113,11 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
 
         return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim, dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
 
-    return
+    return None
 
 
 def visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, img_path, is_normalized=False):
-    if is_normalized:
-        img_path = os.path.join(img_path, "normalized", case_name)
-    else:
-        img_path = os.path.join(img_path, "original_scale", case_name)
+    img_path = os.path.join(img_path, "normalized", case_name) if is_normalized else os.path.join(img_path, "original_scale", case_name)
     os.makedirs(img_path, exist_ok=True)
 
     for i in range(len(output_feature_name)):
@@ -135,34 +132,25 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
         plt.savefig(os.path.join(img_path, f"{output_feature_name[i]}.png"))
         plt.close()
 
-    return
 
-
-def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_data=8):
+def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_data=8, debug=False):
     for i in range(len(output_feature_name)):
         if output_feature_name[i] in target_kW:
-            if test_index not in np.arange(0, num_fixed_data):
-                ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
-                fde = abs(gt_array[-1][i] - pred_array[-1][i])
+            ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
+            fde = abs(gt_array[-1][i] - pred_array[-1][i])
+            if test_index not in np.arange(0, num_fixed_data) or debug:
                 score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 score_list_dict[output_feature_name[i]]["fde"].append(fde)
             else:
-                ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
-                fde = abs(gt_array[-1][i] - pred_array[-1][i])
                 test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
 
-    return
 
-
-def save_evaluation(result_path):
+def save_evaluation(result_path, debug=False):
     for target in target_kW:
         for evaluation in ["ade", "fde"]:
             np_array = np.array(score_list_dict[target][evaluation])
-            np_array_test = np.array(test_score_list_dict[target][evaluation])
-
             mlflow.log_metric(f"{target}_{evaluation.upper()}_mean", np.mean(np_array))
-            mlflow.log_metric(f"test_{target}_{evaluation.upper()}_mean", np.mean(np_array_test))
 
             evaluation_path = os.path.join(result_path, "evaluation")
             os.makedirs(evaluation_path, exist_ok=True)
@@ -174,23 +162,15 @@ def save_evaluation(result_path):
             f.write(f"median: {np.median(np_array)}\n")
             f.close()
 
-            f = open(os.path.join(evaluation_path, f"test_{target}_{evaluation.upper()}.txt"), "w")
-            f.write(f"max: {np.max(np_array_test)}\n")
-            f.write(f"min: {np.min(np_array_test)}\n")
-            f.write(f"mean: {np.mean(np_array_test)}\n")
-            f.write(f"median: {np.median(np_array_test)}\n")
-            f.close()
-
-    return
-
-
-def deviceChecker():
-    if torch.backends.mps.is_available():
-        return "mps"
-    elif torch.cuda.is_available():
-        return "cuda"
-    else:
-        return "cpu"
+            if not debug:
+                np_array_test = np.array(test_score_list_dict[target][evaluation])
+                mlflow.log_metric(f"test_{target}_{evaluation.upper()}_mean", np.mean(np_array_test))
+                f = open(os.path.join(evaluation_path, f"test_{target}_{evaluation.upper()}.txt"), "w")
+                f.write(f"max: {np.max(np_array_test)}\n")
+                f.write(f"min: {np.min(np_array_test)}\n")
+                f.write(f"mean: {np.mean(np_array_test)}\n")
+                f.write(f"median: {np.median(np_array_test)}\n")
+                f.close()
 
 
 def seed_everything(seed=42):

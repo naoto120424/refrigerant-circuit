@@ -1,6 +1,5 @@
 import torch
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 import numpy as np
 import mlflow
 import shutil
@@ -10,7 +9,6 @@ import datetime
 from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
 def main():
@@ -32,10 +30,7 @@ def main():
     parser.add_argument("--criterion", type=str, default="MSE")
     args = parser.parse_args()
 
-    if args.debug:
-        epoch_num = 3
-    else:
-        epoch_num = args.epoch
+    epoch_num = args.epoch if not args.debug else 3
 
     mlflow.set_tracking_uri("../mlflow_experiment")
     mlflow.set_experiment(args.e_name)
@@ -58,37 +53,31 @@ def main():
 
     seed_everything(seed=args.seed)
 
-    device = deviceChecker()
-    data = load_data(look_back=args.look_back)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    data = load_data(look_back=args.look_back, debug=args.debug)
 
     num_fixed_data = 8
     num_control_features = 6
 
-    if args.debug:
-        train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, num_fixed_data + 20), test_size=5)
-        train_index_list, val_index_list = train_test_split(train_index_list, test_size=5)
-        test_index_list = np.append(test_index_list, np.arange(0, 2))
-    else:
+    if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
         test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+    else:
+        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=10)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
 
-    train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
-    val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
+    train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True, debug=args.debug)
+    val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list, debug=args.debug)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
 
-    if args.model in model_list:
-        model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
-    else:
-        print("unknown model name")
-        return
+    model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout) if args.model in model_list else None
+    criterion = criterion_list[args.criterion] if args.criterion in criterion_list else None
 
-    if args.criterion in criterion_list:
-        criterion = criterion_list[args.criterion]
-    else:
-        print("unknown criterion name")
+    if model == None or criterion == None:
+        print(f"unknown model name") if model == None else print(f"unknown criterion name")
         return
 
     model.to(device)
@@ -158,10 +147,10 @@ def main():
             print('This is the best model. Save to "best_model.pth".')
             model_path = os.path.join(result_path, "best_model.pth")
             torch.save(model.state_dict(), model_path)
-    mlflow.log_metric(f"best epoch num", best_epoch_num)
     train_end_time = time.perf_counter()
     train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))
     mlflow.log_metric(f"train time", train_end_time - train_start_time)
+    mlflow.log_metric(f"best epoch num", best_epoch_num)
 
     print("----------------------------------------------")
     print(f"Train Time: {train_time}")
@@ -172,7 +161,9 @@ def main():
         model.load_state_dict(torch.load(model_path))
         model.eval()
         for test_index in tqdm(test_index_list):
-            if test_index in np.arange(0, num_fixed_data):
+            if args.debug:
+                case_name = f"case{str(test_index+1).zfill(4)}"
+            elif test_index in np.arange(0, num_fixed_data):
                 case_name = list(fixed_case_list)[test_index]
             else:
                 case_name = f"case{str(test_index-num_fixed_data+1).zfill(4)}"
@@ -218,11 +209,11 @@ def main():
             for i in range(np.array(gt_output_data).shape[1]):
                 scaling_gt_output_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 
-            evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data)
+            evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data, args.debug)
             visualization(scaling_gt_output_data, scaling_pred_output_data, output_feature_name, output_feature_unit, case_name, img_path, is_normalized=True)
             visualization(gt_output_data, pred_output_data, output_feature_name, output_feature_unit, case_name, img_path)
 
-    save_evaluation(result_path)
+    save_evaluation(result_path, args.debug)
     mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))
     mlflow.log_artifacts(local_dir=result_path, artifact_path="result")
     shutil.rmtree(result_path)
