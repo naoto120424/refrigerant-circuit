@@ -128,28 +128,25 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     input_array = np.array(input_data_list)
     spec_array = np.array(spec_data_list)
     gt_array = np.array(gt_data_list)
-
-    # 入力の標準化処理
-    if is_train:
-        mean_list, std_list = find_meanstd(index_list, debug)
-    else:
-        mean_list, std_list = mean_list, std_list
     # print(input_array.shape)
-    if is_train:
-        print("\n\nTrain Normalization")
-    else:
-        print("\n\nValidation Normalization")
+
+    """入力の標準化処理"""
+    mean_list, std_list = find_meanstd(index_list, debug) if is_train else (mean_list, std_list)
+    print("\n\nTrain Normalization") if is_train else print("\n\nValidation Normalization")
     print("----------------------------------------------")
+
+    """入力[look_back秒分]のデータの標準化"""
     print("[input]")
-    # 入力[look_back秒分]のデータの標準化
     for i in tqdm(range(input_array.shape[3])):
         input_array[:, :, :, i] = (input_array[:, :, :, i] - mean_list[i]) / std_list[i]
+
+    """入力[制御条件]のデータの標準化"""
     print("\n[spec]")
-    # 入力[制御条件]のデータの標準化
     for i in tqdm(range(spec_array.shape[2])):
         spec_array[:, :, i] = (spec_array[:, :, i] - mean_list[i]) / std_list[i]
+
+    """出力のデータの標準化"""
     print("\n[ground truth]")
-    # 出力のデータの標準化
     for i in tqdm(range(gt_array.shape[2])):
         gt_array[:, :, i] = (gt_array[:, :, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 

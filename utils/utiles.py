@@ -62,6 +62,7 @@ model_list = {
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
 
 
+# モデルを決定する関数
 def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout, emb_dropout):
     if "LSTM" in model:
         if model == "LSTM":
@@ -116,6 +117,7 @@ def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout
     return None
 
 
+# グラフを作る関数
 def visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, img_path, is_normalized=False):
     img_path = os.path.join(img_path, "normalized", case_name) if is_normalized else os.path.join(img_path, "original_scale", case_name)
     os.makedirs(img_path, exist_ok=True)
@@ -133,6 +135,7 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
         plt.close()
 
 
+# 評価を計算する関数
 def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_data=8, debug=False):
     for i in range(len(output_feature_name)):
         if output_feature_name[i] in target_kW:
@@ -146,6 +149,7 @@ def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_
                 test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
 
 
+# 計算した評価を保存する関数
 def save_evaluation(result_path, debug=False):
     for target in target_kW:
         for evaluation in ["ade", "fde"]:
@@ -173,6 +177,7 @@ def save_evaluation(result_path, debug=False):
                 f.close()
 
 
+# シード値
 def seed_everything(seed=42):
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
