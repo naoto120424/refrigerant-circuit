@@ -11,6 +11,7 @@
 /__pycache__/
 /sasaguchi/
 /AgentFormer/
+/tft_tf2/
 /model/__pycache__/
 /model/lstm/__pycache__/
 /model/transformer/__pycache__/
