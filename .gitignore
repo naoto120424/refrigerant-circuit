@@ -12,6 +12,7 @@
 /sasaguchi/
 /AgentFormer/
 /tft_tf2/
+/temporal_fusion_transformer_pytorch/
 /model/__pycache__/
 /model/lstm/__pycache__/
 /model/transformer/__pycache__/
