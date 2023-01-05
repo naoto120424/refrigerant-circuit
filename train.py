@@ -6,6 +6,7 @@ import shutil
 import argparse
 import time
 import datetime
+
 from utils.dataloader import *
 from utils.utiles import *
 from sklearn.model_selection import train_test_split
@@ -58,6 +59,7 @@ def main():
 
     num_fixed_data = 8
     num_control_features = 6
+    num_all_features = 36
 
     if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
@@ -160,6 +162,10 @@ def main():
         print("----------------------------------------------")
         model.load_state_dict(torch.load(model_path))
         model.eval()
+
+        if "BaseTransformer" in args.model and "sensor" not in args.model:
+            attention_visualization(model, result_path, args.model, args.dim, args.dim_head, args.heads, args.look_back, num_control_features, num_all_features, device)
+
         for test_index in tqdm(test_index_list):
             if args.debug:
                 case_name = f"case{str(test_index+1).zfill(4)}"
