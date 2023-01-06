@@ -43,10 +43,11 @@ def load_data(look_back=20, debug=False):
     for file in tqdm(csv_files):
         csv_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
-        # single_data = csv_data[:, 1:]
-        single_data = np.delete(single_data, [6, 7, 9], axis=1)  # Chiller
+        # single_data = csv_data[:, 1:] # No decimate function
+        single_data = np.delete(single_data, [8, 6, 5], axis=1)  # Chiller
         spec_data = single_data[:, :num_control_features]
         output_data = single_data[:, num_control_features:]
+        # print("single_data", single_data.shape, "spec_data", spec_data.shape, "output_data", output_data.shape)
         input_time_list = []
         spec_list = []
         gt_list = []
@@ -57,9 +58,9 @@ def load_data(look_back=20, debug=False):
         Xdata.append(np.array(input_time_list))
         Specdata.append(np.array(spec_list))
         Ydata.append(np.array(gt_list))
-    data["inp"] = np.array(Xdata)  # shape(case_num, 1179, 20, 39)
-    data["spec"] = np.array(Specdata)  # shape(case_num, 1179, 9)
-    data["gt"] = np.array(Ydata)  # shape(case_num, 1179, 30)
+    data["inp"] = np.array(Xdata)  # shape(case_num, 1199-look_back, look_back, num_all_features)
+    data["spec"] = np.array(Specdata)  # shape(case_num, 1199-look_back, num_control_features)
+    data["gt"] = np.array(Ydata)  # shape(case_num, 1199-look_back, num_pred_features)
     # print(data["inp"].shape)
     # print(data["spec"].shape)
     # print(data["gt"].shape)
@@ -68,6 +69,7 @@ def load_data(look_back=20, debug=False):
     for i in [9, 7, 6]:  # Chiller
         del data["feature_name"][i]  # Chiller
         del data["feature_unit"][i]  # Chiller
+    # print(data["feature_name"])
     print("----------------------------------------------")
     return data
 
@@ -85,15 +87,14 @@ def find_meanstd(train_index_list, debug=False):
         single_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
         input_data.append(decimate(single_data)[:, 1:])
     input_array = np.array(input_data)
-    input_array = np.delete(input_array, [6, 7, 9], axis=2)  # Chiller
-    # print(input_array.shape)
+    input_array = np.delete(input_array, [8, 6, 5], axis=2)  # Chiller
     mean_list = []
     std_list = []
     for i in range(input_array.shape[2]):
         mean_list.append(input_array[:, :, i].mean())
         std_list.append(input_array[:, :, i].std())
-    # print("平均", mean_list)
-    # print("標準偏差", std_list)
+    # print("平均", len(mean_list), mean_list)
+    # print("標準偏差", len(std_list), std_list)
     return mean_list, std_list
 
 
@@ -129,7 +130,7 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     input_array = np.array(input_data_list)
     spec_array = np.array(spec_data_list)
     gt_array = np.array(gt_data_list)
-    # print(input_array.shape)
+    # print("input_array.shape", input_array.shape)
 
     """入力の標準化処理"""
     mean_list, std_list = find_meanstd(index_list, debug) if is_train else (mean_list, std_list)
@@ -155,9 +156,9 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     data["spec"] = rearrange(spec_array, "a b c -> (a b) c")
     data["gt"] = rearrange(gt_array, "a b c -> (a b) c")
 
-    # print(data["inp"].shape)
-    # print(data["spec"].shape)
-    # print(data["gt"].shape)
+    # print("data[inp].shape", data["inp"].shape)
+    # print("data[spec].shape", data["spec"].shape)
+    # print("data[gt].shape", data["gt"].shape)
     print("----------------------------------------------")
 
     return MazdaDataset(data), mean_list, std_list

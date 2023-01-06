@@ -164,7 +164,7 @@ def main():
         model.load_state_dict(torch.load(model_path))
         model.eval()
 
-        if "BaseTransformer" in args.model and "sensor" not in args.model:
+        if "BaseTransformer" in args.model:
             attention_visualization(model, result_path, args.model, args.dim, args.dim_head, args.heads, args.look_back, num_control_features, num_all_features, device)
 
         for test_index in tqdm(test_index_list):
@@ -185,6 +185,7 @@ def main():
 
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
+            # print("scaling_input_data.shape", scaling_input_data.shape)
             for i in range(scaling_input_data.shape[1]):
                 scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i]) / std_list[i]
             for i in range(scaling_spec_data.shape[1]):

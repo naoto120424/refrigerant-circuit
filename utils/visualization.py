@@ -7,19 +7,28 @@ import os, mlflow
 from einops import rearrange
 from sklearn.metrics import mean_absolute_error
 
-target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW"}
+target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"}
 
 score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": []},
     "Comp_kW": {"ade": [], "fde": []},
     "Eva_kW": {"ade": [], "fde": []},
+    "Comp_OutP": {"ade": [], "fde": []},
 }
 
 test_score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": []},
     "Comp_kW": {"ade": [], "fde": []},
     "Eva_kW": {"ade": [], "fde": []},
+    "Comp_OutP": {"ade": [], "fde": []},
 }
+
+"""
+    ade: average displacement error
+    fde: final displacement error
+    mde: max displacement error
+    ptde: peek timing displacement error
+"""
 
 # 評価を計算する関数
 def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_data=8, debug=False):
@@ -90,7 +99,11 @@ def attention_visualization(model, result_path, model_name, dim, dim_heads, head
         num_agent = num_all_features
     else:
         num_agent = 1
-    x = torch.rand(1, look_back * num_agent + num_control_features, dim).to(device)
+    
+    if "sensor" not in model_name:
+        x = torch.rand(1, look_back * num_agent + num_control_features, dim).to(device)
+    else:
+        x = torch.rand(1, num_all_features + num_control_features, dim).to(device)
 
     i = 0
     for key, value in model.state_dict().items():
