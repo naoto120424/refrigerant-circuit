@@ -10,24 +10,23 @@ from sklearn.metrics import mean_absolute_error
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"}
 
 score_list_dict = {
-    "ACDS_kW": {"ade": [], "fde": []},
-    "Comp_kW": {"ade": [], "fde": []},
-    "Eva_kW": {"ade": [], "fde": []},
-    "Comp_OutP": {"ade": [], "fde": []},
+    "ACDS_kW": {"ade": [], "fde": [], "mde": []},
+    "Comp_kW": {"ade": [], "fde": [], "mde": []},
+    "Eva_kW": {"ade": [], "fde": [], "mde": []},
+    "Comp_OutP": {"ade": [], "fde": [], "mde": []},
 }
 
 test_score_list_dict = {
-    "ACDS_kW": {"ade": [], "fde": []},
-    "Comp_kW": {"ade": [], "fde": []},
-    "Eva_kW": {"ade": [], "fde": []},
-    "Comp_OutP": {"ade": [], "fde": []},
+    "ACDS_kW": {"ade": [], "fde": [], "mde": []},
+    "Comp_kW": {"ade": [], "fde": [], "mde": []},
+    "Eva_kW": {"ade": [], "fde": [], "mde": []},
+    "Comp_OutP": {"ade": [], "fde": [], "mde": []},
 }
 
 """
-    ade: average displacement error
-    fde: final displacement error
-    mde: max displacement error
-    ptde: peek timing displacement error
+    ade: average displacement error (全時刻の誤差の平均)
+    fde: final displacement error (最終時刻の誤差)
+    mde: max displacement error (全時刻の誤差の最大値)
 """
 
 # 評価を計算する関数
@@ -36,18 +35,21 @@ def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_
         if output_feature_name[i] in target_kW:
             ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
             fde = abs(gt_array[-1][i] - pred_array[-1][i])
+            mde = max(abs(np.array(gt_array)[:, i] - np.array(pred_array)[:, i]))
             if test_index not in np.arange(0, num_fixed_data) or debug:
                 score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 score_list_dict[output_feature_name[i]]["fde"].append(fde)
+                score_list_dict[output_feature_name[i]]["mde"].append(mde)
             else:
                 test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
+                test_score_list_dict[output_feature_name[i]]["mde"].append(mde)
 
 
 # 計算した評価を保存する関数
 def save_evaluation(result_path, debug=False):
     for target in target_kW:
-        for evaluation in ["ade", "fde"]:
+        for evaluation in ["ade", "fde", "mde"]:
             np_array = np.array(score_list_dict[target][evaluation])
             mlflow.log_metric(f"{target}_{evaluation.upper()}_mean", np.mean(np_array))
 
@@ -99,7 +101,7 @@ def attention_visualization(model, result_path, model_name, dim, dim_heads, head
         num_agent = num_all_features
     else:
         num_agent = 1
-    
+
     if "sensor" not in model_name:
         x = torch.rand(1, look_back * num_agent + num_control_features, dim).to(device)
     else:
