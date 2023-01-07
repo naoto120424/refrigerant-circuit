@@ -10,6 +10,7 @@ import datetime
 from utils.dataloader import *
 from utils.utiles import *
 from utils.visualization import *
+from utils.earlystopping import EarlyStopping
 from sklearn.model_selection import train_test_split
 
 
@@ -18,7 +19,7 @@ def main():
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bs", type=int, default=32)
-    parser.add_argument("--epoch", type=int, default=100)
+    parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--look_back", type=int, default=20)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -85,8 +86,8 @@ def main():
 
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+    early_stopping = EarlyStopping(patience=10, verbose=True)
 
-    best_loss = 100.0
     print("\n\nTrain Start")
     print("----------------------------------------------")
     print(f"Device      : {str.upper(device)}")
@@ -107,7 +108,7 @@ def main():
     train_start_time = time.perf_counter()
     for epoch in range(1, epoch_num + 1):
         print("----------------------------------------------")
-        print(f"[Epoch {epoch}/{epoch_num}]")
+        print(f"[Epoch {epoch}]")
         model.train()
         epoch_loss = 0.0
         for batch in tqdm(train_dataloader):
@@ -122,7 +123,7 @@ def main():
             epoch_loss += loss.item() * inp.size(0)
             optimizer.step()
         epoch_loss = epoch_loss / len(train_dataloader)
-        print(f"Train Loss: {epoch_loss}")
+        print(f"Train Loss: {epoch_loss:.6f}")
         mlflow.log_metric(f"train loss", epoch_loss, step=epoch)
 
         with torch.no_grad():
@@ -138,22 +139,18 @@ def main():
                 epoch_test_error += test_error.item() * inp.size(0)
 
             epoch_test_error = epoch_test_error / len(val_dataloader)
-            print(f"Val Loss: {epoch_test_error}")
+            print(f"Val Loss: {epoch_test_error:.6f}")
             mlflow.log_metric(f"val loss", epoch_test_error, step=epoch)
 
         result_path = os.path.join("..", "result")
         os.makedirs(result_path, exist_ok=True)
+        early_stopping(epoch_test_error, model)
+        if early_stopping.early_stop:
+            break
 
-        if epoch_test_error < best_loss:
-            best_epoch_num = epoch
-            best_loss = epoch_test_error
-            print('This is the best model. Save to "best_model.pth".')
-            model_path = os.path.join(result_path, "best_model.pth")
-            torch.save(model.state_dict(), model_path)
     train_end_time = time.perf_counter()
     train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))
     mlflow.log_metric(f"train time", train_end_time - train_start_time)
-    mlflow.log_metric(f"best epoch num", best_epoch_num)
 
     print("----------------------------------------------")
     print(f"Train Time: {train_time}")
@@ -161,7 +158,7 @@ def main():
     with torch.no_grad():
         print(f"\n\nTest Start. Case Num: {len(test_index_list)}")
         print("----------------------------------------------")
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(early_stopping.path))
         model.eval()
 
         if "BaseTransformer" in args.model:
