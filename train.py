@@ -19,7 +19,7 @@ def main():
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bs", type=int, default=32)
-    parser.add_argument("--epoch", type=int, default=10000)
+    parser.add_argument("--epoch", type=int, default=100000)
     parser.add_argument("--look_back", type=int, default=20)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -33,13 +33,10 @@ def main():
     parser.add_argument("--criterion", type=str, default="MSE")
     args = parser.parse_args()
 
-    epoch_num = args.epoch if not args.debug else 3
-
     mlflow.set_tracking_uri("../mlflow_experiment")
     mlflow.set_experiment(args.e_name)
     mlflow.start_run()
     mlflow.log_param("seed", args.seed)
-    mlflow.log_param("epoch num", epoch_num)
     mlflow.log_param("batch size", args.bs)
     mlflow.log_param("look back", args.look_back)
     mlflow.log_param("debug", args.debug)
@@ -55,7 +52,6 @@ def main():
         mlflow.log_param("emb_dropout", args.emb_dropout)
 
     seed_everything(seed=args.seed)
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
     data = load_data(look_back=args.look_back, debug=args.debug)
 
@@ -77,16 +73,13 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
 
-    model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout) if args.model in model_list else None
-    criterion = criterion_list[args.criterion] if args.criterion in criterion_list else None
-
-    if model == None or criterion == None:
-        print(f"unknown model name") if model == None else print(f"unknown criterion name")
-        return
+    model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout) if args.model in model_list else print(f"unknown model name")
+    criterion = criterion_list[args.criterion] if args.criterion in criterion_list else print(f"unknown criterion name")
 
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     early_stopping = EarlyStopping(patience=10, verbose=True)
+    epoch_num = args.epoch if not args.debug else 2
 
     print("\n\nTrain Start")
     print("----------------------------------------------")
@@ -146,6 +139,7 @@ def main():
         os.makedirs(result_path, exist_ok=True)
         early_stopping(epoch_test_error, model)
         if early_stopping.early_stop:
+            mlflow.log_metric(f"best epoch num", epoch - early_stopping.patience)
             break
 
     train_end_time = time.perf_counter()
@@ -161,8 +155,7 @@ def main():
         model.load_state_dict(torch.load(early_stopping.path))
         model.eval()
 
-        if "BaseTransformer" in args.model:
-            attention_visualization(model, result_path, args.model, args.dim, args.dim_head, args.heads, args.look_back, num_control_features, num_all_features, device)
+        attention_visualization(model, result_path, args.model, args.dim, args.dim_head, args.heads, args.look_back, num_control_features, num_all_features, device) if "BaseTransformer" in args.model else None
 
         for test_index in tqdm(test_index_list):
             if args.debug:
@@ -182,7 +175,6 @@ def main():
 
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
-            # print("scaling_input_data.shape", scaling_input_data.shape)
             for i in range(scaling_input_data.shape[1]):
                 scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i]) / std_list[i]
             for i in range(scaling_spec_data.shape[1]):
