@@ -18,9 +18,9 @@ def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--bs", type=int, default=32)
-    parser.add_argument("--epoch", type=int, default=100000)
-    parser.add_argument("--look_back", type=int, default=20)
+    parser.add_argument("--bs", type=int, default=16)
+    parser.add_argument("--epoch", type=int, default=500)
+    parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
     parser.add_argument("--heads", type=int, default=8)
@@ -31,6 +31,8 @@ def main():
     parser.add_argument("--debug", type=bool, default=False)
     parser.add_argument("--model", type=str, default="BaseTransformer_only1pe")
     parser.add_argument("--criterion", type=str, default="MSE")
+    parser.add_argument("--patience", type=int, default=7)
+    parser.add_argument("--delta", type=float, default=1e-3)
     args = parser.parse_args()
 
     mlflow.set_tracking_uri("../mlflow_experiment")
@@ -42,6 +44,8 @@ def main():
     mlflow.log_param("debug", args.debug)
     mlflow.log_param("model", args.model)
     mlflow.log_param("criterion", args.criterion)
+    mlflow.log_param("patience", args.patience)
+    mlflow.log_param("delta", args.delta)
     mlflow.log_param("dim", args.dim)
     mlflow.log_param("depth", args.depth)
     mlflow.log_param("dropout", args.dropout)
@@ -54,10 +58,6 @@ def main():
     seed_everything(seed=args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     data = load_data(look_back=args.look_back, debug=args.debug)
-
-    num_fixed_data = 8
-    num_control_features = 6
-    num_all_features = 36
 
     if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
@@ -78,8 +78,8 @@ def main():
 
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-    early_stopping = EarlyStopping(patience=10, verbose=True)
-    epoch_num = args.epoch if not args.debug else 2
+    early_stopping = EarlyStopping(patience=args.patience, delta=args.delta, verbose=True)
+    epoch_num = args.epoch if not args.debug else 3
 
     print("\n\nTrain Start")
     print("----------------------------------------------")

@@ -4,8 +4,11 @@ import numpy as np
 import random, os
 
 
-predict_time_list = []
+num_fixed_data = 8
+num_control_features = 6
+num_all_features = 36
 
+predict_time_list = []
 
 fixed_case_list = {
     "fixed_case0001_Comp_rpm_Swing_test_VF_Fix",
