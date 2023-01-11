@@ -132,7 +132,7 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
 
     """入力の標準化処理"""
     mean_list, std_list = find_meanstd(index_list, debug) if is_train else (mean_list, std_list)
-    print("\n\nTrain Normalization") if is_train else print("\n\nValidation Normalization")
+    print("\n\nTrain Dataset Normalization") if is_train else print("\n\nValidation Dataset Normalization")
     print("----------------------------------------------")
 
     """入力[look_back秒分]のデータの標準化"""

@@ -18,8 +18,8 @@ def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--bs", type=int, default=16)
-    parser.add_argument("--epoch", type=int, default=500)
+    parser.add_argument("--bs", type=int, default=32)
+    parser.add_argument("--epoch", type=int, default=100)
     parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -41,6 +41,7 @@ def main():
     mlflow.log_param("seed", args.seed)
     mlflow.log_param("batch size", args.bs)
     mlflow.log_param("look back", args.look_back)
+    mlflow.log_param("epoch", args.epoch)
     mlflow.log_param("debug", args.debug)
     mlflow.log_param("model", args.model)
     mlflow.log_param("criterion", args.criterion)
@@ -141,6 +142,8 @@ def main():
         if early_stopping.early_stop:
             mlflow.log_metric(f"best epoch num", epoch - early_stopping.patience)
             break
+        if epoch == epoch_num:
+            mlflow.log_metric(f"best epoch num", epoch - early_stopping.counter)
 
     train_end_time = time.perf_counter()
     train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))

@@ -8,6 +8,7 @@ from einops import rearrange
 from sklearn.metrics import mean_absolute_error
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"}
+target_kW_unit = {"kW", "kW", "kW", "MPa"}
 
 score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": [], "mde": []},
@@ -21,6 +22,13 @@ test_score_list_dict = {
     "Comp_kW": {"ade": [], "fde": [], "mde": []},
     "Eva_kW": {"ade": [], "fde": [], "mde": []},
     "Comp_OutP": {"ade": [], "fde": [], "mde": []},
+}
+
+target_kW_visualization = {
+    "ACDS_kW": {"pred": [], "gt": []},
+    "Comp_kW": {"pred": [], "gt": []},
+    "Eva_kW": {"pred": [], "gt": []},
+    "Comp_OutP": {"pred": [], "gt": []},
 }
 
 """
@@ -90,6 +98,42 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
         ax.legend(loc="best")
         plt.savefig(os.path.join(img_path, f"{output_feature_name[i]}.png"))
         plt.close()
+        if output_feature_name[i] in target_kW:
+            target_kW_visualization[output_feature_name[i]]["pred"] = np.array(pred_array)[:, i]
+            target_kW_visualization[output_feature_name[i]]["gt"] = np.array(gt_array)[:, i]
+
+    fig = plt.figure(figsize=(8, 16))
+    ax1 = fig.add_subplot(4, 1, 1)
+    ax2 = fig.add_subplot(4, 1, 2)
+    ax3 = fig.add_subplot(4, 1, 3)
+    ax4 = fig.add_subplot(4, 1, 4)
+
+    ax1.plot(np.array(target_kW_visualization["ACDS_kW"]["gt"]), color="#e46409", label="gt")
+    ax1.plot(np.array(target_kW_visualization["ACDS_kW"]["pred"]), color="b", label="pred")
+    ax2.plot(np.array(target_kW_visualization["Comp_kW"]["gt"]), color="#e46409", label="gt")
+    ax2.plot(np.array(target_kW_visualization["Comp_kW"]["pred"]), color="b", label="pred")
+    ax3.plot(np.array(target_kW_visualization["Eva_kW"]["gt"]), color="#e46409", label="gt")
+    ax3.plot(np.array(target_kW_visualization["Eva_kW"]["pred"]), color="b", label="pred")
+    ax4.plot(np.array(target_kW_visualization["Comp_OutP"]["gt"]), color="#e46409", label="gt")
+    ax4.plot(np.array(target_kW_visualization["Comp_OutP"]["pred"]), color="b", label="pred")
+
+    ax1.set_xlabel("Time[s]")
+    ax1.set_ylabel("ACDS_kW[kW]")
+    ax2.set_xlabel("Time[s]")
+    ax2.set_ylabel("Comp_kW[kW]")
+    ax3.set_xlabel("Time[s]")
+    ax3.set_ylabel("Eva_kW[kW]")
+    ax4.set_xlabel("Time[s]")
+    ax4.set_ylabel("Comp_OutP[MPa]")
+
+    ax1.legend(loc="best")
+    ax2.legend(loc="best")
+    ax3.legend(loc="best")
+    ax4.legend(loc="best")
+
+    fig.tight_layout()
+    plt.savefig(os.path.join(img_path, f"target_kW.png"))
+    plt.close()
 
 
 # アテンションマップを可視化する関数
