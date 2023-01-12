@@ -25,4 +25,4 @@ class LSTMClassifier(nn.Module):
         hidden1, _ = self.lstm(x, h)
         hidden2 = self.spec_dense(spec)
         y = self.predicter(torch.cat([hidden1[:, -1, :], hidden2], dim=1))  # 最後のセルだけを取り出している
-        return y
+        return y, _

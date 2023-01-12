@@ -86,7 +86,7 @@ class Attention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out)
+        return self.to_out(out), attn
 
 
 class Transformer(nn.Module):
@@ -97,20 +97,21 @@ class Transformer(nn.Module):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(
-                            dim,
-                            Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout),
-                        ),
+                        PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
             )
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        attn_map_all = []
+        for i, (attn, ff) in enumerate(self.layers):
+            attn_x, attn_map = attn(x)
+            x = attn_x + x
             x = ff(x) + x
-        return x
+            attn_map_all = attn_map if i == 0 else torch.cat((attn_map_all, attn_map), dim=0)
+
+        return x, attn_map_all
 
 
 class BaseTransformer(nn.Module):
@@ -152,7 +153,7 @@ class BaseTransformer(nn.Module):
         x = torch.cat((x, spec_emb_all), dim=1)
 
         x = self.dropout(x)
-        x = self.transformer(x)
+        x, attn = self.transformer(x)
         x = x.mean(dim=1)
         x = self.generator(x)
-        return x
+        return x, attn

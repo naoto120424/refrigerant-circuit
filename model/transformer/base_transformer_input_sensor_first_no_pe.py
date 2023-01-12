@@ -86,7 +86,7 @@ class Attention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out)
+        return self.to_out(out), attn
 
 
 class Transformer(nn.Module):
@@ -104,10 +104,14 @@ class Transformer(nn.Module):
             )
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        attn_map_all = []
+        for i, (attn, ff) in enumerate(self.layers):
+            attn_x, attn_map = attn(x)
+            x = attn_x + x
             x = ff(x) + x
-        return x
+            attn_map_all = attn_map if i == 0 else torch.cat((attn_map_all, attn_map), dim=0)
+
+        return x, attn_map_all
 
 
 class BaseTransformer(nn.Module):
@@ -157,9 +161,9 @@ class BaseTransformer(nn.Module):
 
         # x += self.pos_embedding
         x = self.dropout(x)
-        x = self.transformer(x)
+        x, attn = self.transformer(x)
         # print('x.shape', x.shape)
         x = x.mean(dim=1)
         # print('x.shape mean', x.shape)
         x = self.generator(x)
-        return x
+        return x, attn

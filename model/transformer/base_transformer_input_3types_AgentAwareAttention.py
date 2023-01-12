@@ -149,13 +149,12 @@ class FeedForward(nn.Module):
 
 
 class AgentAwareAttention(nn.Module):
-    def __init__(self, dim, num_agent=200, look_back=20, num_control_features=9, heads=20, dim_head=1600, dropout=0.1, i=0):
+    def __init__(self, dim, num_agent=200, look_back=20, num_control_features=9, heads=20, dim_head=1600, dropout=0.1):
         super().__init__()
         self.num_agent = num_agent
         self.num_control_features = num_control_features
         self.look_back = look_back
         inner_dim = dim_head * heads
-        self.i = i
         project_out = not (heads == 1 and dim_head == dim)
 
         self.heads = heads
@@ -202,67 +201,32 @@ class AgentAwareAttention(nn.Module):
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
 
-        """
-        attn_img = attn.detach().to("cpu").numpy().copy()[0]
-        img_path = os.path.join("img", "inp_3types", "attention", str(self.i + 1))
-        os.makedirs(img_path, exist_ok=True)
-        for j in range(self.heads):
-            fig = plt.figure()
-            plt.imshow(np.array(attn_img[j, :, :]), cmap="Reds")
-            plt.colorbar()
-            plt.savefig(f"img/inp_3types/attention/{self.i + 1}/attention_heads{j+1}.png")
-            plt.close()
-        """
-
-        return self.to_out(out)
-
-
-class Attention(nn.Module):
-    def __init__(self, dim, heads=20, dim_head=1600, dropout=0.1):
-        super().__init__()
-        inner_dim = dim_head * heads
-        project_out = not (heads == 1 and dim_head == dim)
-
-        self.heads = heads
-        self.scale = dim_head**-0.5
-
-        self.attend = nn.Softmax(dim=-1)
-        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
-
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
-
-    def forward(self, x):
-        qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
-
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-
-        attn = self.attend(dots)
-
-        out = torch.matmul(attn, v)
-        out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out)
+        return self.to_out(out), attn
 
 
 class Transformer(nn.Module):
     def __init__(self, dim, num_agent, look_back, num_control_features, depth, heads, dim_head, fc_dim, dropout=0.1):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for i in range(depth):
+        for _ in range(depth):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(dim, AgentAwareAttention(dim, num_agent, look_back, num_control_features, heads=heads, dim_head=dim_head, dropout=dropout, i=i)),
+                        PreNorm(dim, AgentAwareAttention(dim, num_agent, look_back, num_control_features, heads=heads, dim_head=dim_head, dropout=dropout)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
             )
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        attn_map_all = []
+        for i, (attn, ff) in enumerate(self.layers):
+            attn_x, attn_map = attn(x)
+            x = attn_x + x
             x = ff(x) + x
-        return x
+            attn_map_all = attn_map if i == 0 else torch.cat((attn_map_all, attn_map), dim=0)
+
+        return x, attn_map_all
 
 
 class BaseTransformer(nn.Module):
@@ -303,7 +267,7 @@ class BaseTransformer(nn.Module):
         x = torch.cat((x, spec_emb_all), dim=1)
 
         x = self.dropout(x)
-        x = self.transformer(x)
+        x, attn = self.transformer(x)
         x = x.mean(dim=1)
         x = self.generator(x)
-        return x
+        return x, attn

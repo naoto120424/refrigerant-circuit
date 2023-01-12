@@ -18,8 +18,8 @@ def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--bs", type=int, default=32)
-    parser.add_argument("--epoch", type=int, default=100)
+    parser.add_argument("--bs", type=int, default=16)
+    parser.add_argument("--epoch", type=int, default=1000)
     parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -58,18 +58,19 @@ def main():
 
     seed_everything(seed=args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    data = load_data(look_back=args.look_back, debug=args.debug)
+    data = load_data(look_back=args.look_back)
 
     if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
-        test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
     else:
-        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=10)
+        train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, num_fixed_data + 100), test_size=10)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
 
-    train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True, debug=args.debug)
-    val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list, debug=args.debug)
+    test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+
+    train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
+    val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
@@ -111,7 +112,7 @@ def main():
             spec = batch["spec"].to(device)
             gt = batch["gt"].to(device)
 
-            pred = model(inp, spec)
+            pred, _ = model(inp, spec)
             loss = criterion(pred, gt)
             loss.backward()
             epoch_loss += loss.item() * inp.size(0)
@@ -128,7 +129,7 @@ def main():
                 spec = batch["spec"].to(device)
                 gt = batch["gt"].to(device)
 
-                pred = model(inp, spec)
+                pred, _ = model(inp, spec)
                 test_error = torch.mean(torch.abs(gt - pred))
                 epoch_test_error += test_error.item() * inp.size(0)
 
@@ -138,12 +139,9 @@ def main():
 
         result_path = os.path.join("..", "result")
         os.makedirs(result_path, exist_ok=True)
-        early_stopping(epoch_test_error, model)
+        early_stopping(epoch_test_error, model, epoch)
         if early_stopping.early_stop:
-            mlflow.log_metric(f"best epoch num", epoch - early_stopping.patience)
             break
-        if epoch == epoch_num:
-            mlflow.log_metric(f"best epoch num", epoch - early_stopping.counter)
 
     train_end_time = time.perf_counter()
     train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))
@@ -158,17 +156,11 @@ def main():
         model.load_state_dict(torch.load(early_stopping.path))
         model.eval()
 
-        attention_visualization(model, result_path, args.model, args.dim, args.dim_head, args.heads, args.look_back, num_control_features, num_all_features, device) if "BaseTransformer" in args.model else None
-
         for test_index in tqdm(test_index_list):
-            if args.debug:
-                case_name = f"case{str(test_index+1).zfill(4)}"
-            elif test_index in np.arange(0, num_fixed_data):
+            if test_index in np.arange(0, num_fixed_data):
                 case_name = list(fixed_case_list)[test_index]
             else:
                 case_name = f"case{str(test_index-num_fixed_data+1).zfill(4)}"
-            img_path = os.path.join(result_path, "img")
-            os.makedirs(img_path, exist_ok=True)
 
             output_feature_name = data["feature_name"][num_control_features + 1 :]
             output_feature_unit = data["feature_unit"][num_control_features + 1 :]
@@ -183,13 +175,19 @@ def main():
             for i in range(scaling_spec_data.shape[1]):
                 scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
 
+            attn_all = []
+
             start_time = time.perf_counter()
             for i in range(scaling_spec_data.shape[0]):
                 input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
-                scaling_pred_data = model(input, spec).detach().to("cpu").numpy().copy()[0]
+                scaling_pred_data, attn = model(input, spec)
+                scaling_pred_data = scaling_pred_data.detach().to("cpu").numpy().copy()[0]
                 new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
                 scaling_input_data = np.concatenate([scaling_input_data, new_scaling_input_data], axis=0)
+                if "BaseTransformer" in args.model:
+                    attn = attn.detach().to("cpu").numpy().copy()
+                    attn_all.append(attn)
             end_time = time.perf_counter()
             predict_time_list.append(end_time - start_time)
 
@@ -209,11 +207,12 @@ def main():
             for i in range(np.array(gt_output_data).shape[1]):
                 scaling_gt_output_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 
-            evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data, args.debug)
-            visualization(scaling_gt_output_data, scaling_pred_output_data, output_feature_name, output_feature_unit, case_name, img_path, is_normalized=True)
-            visualization(gt_output_data, pred_output_data, output_feature_name, output_feature_unit, case_name, img_path)
+            evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data)
+            visualization(scaling_gt_output_data, scaling_pred_output_data, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=True)
+            visualization(gt_output_data, pred_output_data, output_feature_name, output_feature_unit, case_name, result_path)
+            attention_visualization(attn_all, args.depth, args.heads, result_path, case_name) if "BaseTransformer" in args.model else None
 
-    save_evaluation(result_path, args.debug)
+    save_evaluation(result_path)
     mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))
     mlflow.log_artifacts(local_dir=result_path, artifact_path="result")
     shutil.rmtree(result_path)
