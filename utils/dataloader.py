@@ -26,10 +26,10 @@ def decimate(data):
 
 
 # 全データをロードする関数
-def load_data(look_back=20, debug=False):
+def load_data(look_back=20):
     print("Load Data")
     print("----------------------------------------------")
-    data_path = "../dataset/" if not debug else "../step1_Eva_dataset/"
+    data_path = "../dataset/"
     csv_files = os.listdir(data_path)
     csv_files.sort()
 
@@ -74,8 +74,8 @@ def load_data(look_back=20, debug=False):
 
 
 # 訓練データから標準化用の平均と標準偏差を求める関数
-def find_meanstd(train_index_list, debug=False):
-    data_path = "../dataset/" if not debug else "../step1_Eva_dataset/"
+def find_meanstd(train_index_list):
+    data_path = "../dataset/"
     csv_files = os.listdir(data_path)
     csv_files.sort()
     train_csv_files = []
@@ -114,7 +114,7 @@ class MazdaDataset(Dataset):
 
 
 # データセットを作成する関数
-def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[], debug=False):
+def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[]):
     num_control_features = 6  # Chiller
     data = {}
     input_data_list = []
@@ -131,7 +131,7 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     gt_array = np.array(gt_data_list)
 
     """入力の標準化処理"""
-    mean_list, std_list = find_meanstd(index_list, debug) if is_train else (mean_list, std_list)
+    mean_list, std_list = find_meanstd(index_list) if is_train else (mean_list, std_list)
     print("\n\nTrain Dataset Normalization") if is_train else print("\n\nValidation Dataset Normalization")
     print("----------------------------------------------")
 
