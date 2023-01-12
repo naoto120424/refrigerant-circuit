@@ -1,7 +1,8 @@
 import torch
 from torch import nn
-import math
 import matplotlib.pyplot as plt
+import numpy as np
+import os, math
 
 from copy import deepcopy
 from einops import rearrange, repeat
@@ -18,9 +19,9 @@ def clones(module, n):
 
 
 # classes
-class PositionalEncoding(nn.Module):
+class PositionalEmbedding(nn.Module):
     def __init__(self, d_model, max_len=5000):
-        super(PositionalEncoding, self).__init__()
+        super(PositionalEmbedding, self).__init__()
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model).float()
         pe.requires_grad = False
@@ -36,84 +37,6 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         return self.pe[:, : x.size(1)]
-
-
-class AgentEncoding(nn.Module):
-    def __init__(self, d_model, look_back, num_control_features, max_len=5000):
-        super(AgentEncoding, self).__init__()
-        self.d_model = d_model
-        self.look_back = look_back
-        self.num_control_features = num_control_features
-        ae = torch.zeros(max_len, d_model).float()
-        ae.requires_grad = False
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
-        ae[:, 0::2] = torch.sin(position * div_term)
-        ae[:, 1::2] = torch.cos(position * div_term)
-        ae = ae.unsqueeze(0)
-        self.register_buffer("ae", ae)
-
-    def forward(self, x):
-        # print(x.shape)
-        ae = self.ae[:, : self.look_back]
-        # ae_control_features = self.ae[:, self.look_back : self.look_back + self.num_control_features]
-        # num_a = int((x.size(1) - self.num_control_features) / self.look_back)
-        num_a = int(x.size(1) / self.look_back)
-        # print(num_a)
-        ae = ae.repeat(1, num_a, 1)
-        # ae = torch.cat([ae, ae_control_features], dim=1)
-        # print(ae.shape)
-        return ae[:, : x.size(1)]
-
-
-class InputEmbedding(nn.Module):
-    def __init__(self, look_back, num_control_features, num_byproduct_features, num_target_features, dim):
-        super(InputEmbedding, self).__init__()
-        self.look_back = look_back
-        self.num_control_features = num_control_features
-        self.num_byproduct_features = num_byproduct_features
-        self.num_target_features = num_target_features
-
-        self.control_embedding = nn.Linear(num_control_features, dim)
-        self.byproduct_embedding = nn.Linear(num_byproduct_features, dim)
-        self.target_embedding = nn.Linear(num_target_features, dim)
-
-        self.positional_encoding = PositionalEncoding(dim)
-        self.agent_encoding = AgentEncoding(dim, self.look_back, self.num_control_features)
-
-    def forward(self, x):
-        control = self.control_embedding(x[:, :, : self.num_control_features])
-        # control += self.positional_embedding(control)
-        # print('control embedding: ', control.shape)
-        byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
-        # byproduct += self.positional_embedding(byproduct)
-        # print('byproduct embedding: ', byproduct.shape)
-        target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
-        # target += self.positional_embedding(target)
-        # print('target embedding: ', target.shape)
-
-        x = torch.cat([control, byproduct, target], dim=1)
-        x += self.positional_encoding(x)
-        x += self.agent_encoding(x)
-
-        """
-        # positional encoding visualization
-        pe = self.positional_encoding(x).to("cpu").detach().numpy().copy()
-        print("pe control", pe.shape)
-        fig = plt.figure()
-        plt.imshow(pe[0])
-        plt.colorbar()
-        plt.savefig("img/positional_encoding_input_3types.png")
-        # agent encoding visualization
-        ae = self.agent_encoding(x).to("cpu").detach().numpy().copy()
-        print("ae", ae.shape)
-        fig = plt.figure()
-        plt.imshow(ae[0])
-        plt.colorbar()
-        plt.savefig("img/agent_encoding_input_3types.png")
-        """
-
-        return x
 
 
 class PreNorm(nn.Module):
@@ -165,7 +88,7 @@ class Attention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out)
+        return self.to_out(out), attn
 
 
 class Transformer(nn.Module):
@@ -183,14 +106,18 @@ class Transformer(nn.Module):
             )
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        attn_map_all = []
+        for i, (attn, ff) in enumerate(self.layers):
+            attn_x, attn_map = attn(x)
+            x = attn_x + x
             x = ff(x) + x
-        return x
+            attn_map_all = attn_map if i == 0 else torch.cat((attn_map_all, attn_map), dim=0)
+
+        return x, attn_map_all
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, look_back, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
         self.num_all_features = 36
@@ -200,8 +127,10 @@ class BaseTransformer(nn.Module):
         self.num_target_features = 3
         self.look_back = look_back
 
-        self.input_embedding = InputEmbedding(self.look_back, self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
+        self.input_embedding = nn.Linear(self.look_back, dim)
+        self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
 
+        self.pos_embedding = nn.Parameter(torch.randn(1, self.num_all_features + self.num_control_features, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
         self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
@@ -211,7 +140,13 @@ class BaseTransformer(nn.Module):
         self.generator = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features))
 
     def forward(self, input, spec):
+        # print('input.shape', input.shape)
+        input = torch.permute(input, (0, 2, 1))
+        # print(input.shape)
         x = self.input_embedding(input)
+        # print('input_embedding', x.shape)
+        # x += self.positional_embedding(x)
+        # print('positional_embedding', x.shape)
 
         spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
         spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
@@ -224,9 +159,13 @@ class BaseTransformer(nn.Module):
                 spec_emb_all = torch.cat((spec_emb_all, spec_emb), dim=1)
 
         x = torch.cat((x, spec_emb_all), dim=1)
+        # print('cat with spec', x.shape)
 
+        # x += self.pos_embedding
         x = self.dropout(x)
-        x = self.transformer(x)
+        x, attn = self.transformer(x)
+        # print('x.shape', x.shape)
         x = x.mean(dim=1)
+        # print('x.shape mean', x.shape)
         x = self.generator(x)
-        return x
+        return x, attn

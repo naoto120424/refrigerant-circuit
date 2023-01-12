@@ -1,6 +1,8 @@
 import torch
 from torch import nn
-import math
+import matplotlib.pyplot as plt
+import numpy as np
+import os, math
 
 from copy import deepcopy
 from einops import rearrange, repeat
@@ -86,7 +88,7 @@ class Attention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out)
+        return self.to_out(out), attn
 
 
 class Transformer(nn.Module):
@@ -104,14 +106,18 @@ class Transformer(nn.Module):
             )
 
     def forward(self, x):
-        for attn, ff in self.layers:
-            x = attn(x) + x
+        attn_map_all = []
+        for i, (attn, ff) in enumerate(self.layers):
+            attn_x, attn_map = attn(x)
+            x = attn_x + x
             x = ff(x) + x
-        return x
+            attn_map_all = attn_map if i == 0 else torch.cat((attn_map_all, attn_map), dim=0)
+
+        return x, attn_map_all
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, look_back, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
         self.num_all_features = 36
@@ -123,8 +129,6 @@ class BaseTransformer(nn.Module):
 
         self.input_embedding = nn.Linear(self.num_all_features, dim)
         self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
-
-        self.pos_embedding = nn.Parameter(torch.randn(1, self.look_back + self.num_control_features, dim))
 
         self.dropout = nn.Dropout(emb_dropout)
 
@@ -149,11 +153,9 @@ class BaseTransformer(nn.Module):
                 spec_emb_all = torch.cat((spec_emb_all, spec_emb), dim=1)
 
         x = torch.cat((x, spec_emb_all), dim=1)
-        # print(x.shape)
 
-        x += self.pos_embedding
         x = self.dropout(x)
-        x = self.transformer(x)
+        x, attn = self.transformer(x)
         x = x.mean(dim=1)
         x = self.generator(x)
-        return x
+        return x, attn

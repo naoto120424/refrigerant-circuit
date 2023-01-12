@@ -23,7 +23,7 @@ fixed_case_list = {
 
 model_list = {
     "LSTM",
-    "BaseTransformer_only1pe",
+    "BaseTransformer",
     "BaseTransformer_sensor_first_no_pe",
     "BaseTransformer_3types_aete",
     "BaseTransformer_3types_AgentAwareAttention",
@@ -45,27 +45,27 @@ def seed_everything(seed=42):
 
 
 # モデルを決定する関数
-def modelDecision(model, look_back, dim, depth, heads, fc_dim, dim_head, dropout, emb_dropout):
-    if "LSTM" in model:
-        if model == "LSTM":
+def modelDecision(args):
+    if "LSTM" in args.model:
+        if args.model == "LSTM":
             from model.lstm.lstm import LSTMClassifier
 
-        return LSTMClassifier(look_back=look_back, num_hidden_units=dim, num_layers=depth, dropout=dropout)
+        return LSTMClassifier(args.look_back, args.depth, args.dim, args.dropout)
 
-    if "BaseTransformer" in model:
-        if model == "BaseTransformer_only1pe":
-            from model.transformer.base_transformer_only1pe import BaseTransformer
-        elif model == "BaseTransformer_sensor_first_no_pe":
-            from model.transformer.base_transformer_input_sensor_first_no_pe import BaseTransformer
-        elif model == "BaseTransformer_3types_aete":
-            from model.transformer.base_transformer_input_3types_aete import BaseTransformer
-        elif model == "BaseTransformer_3types_AgentAwareAttention":
-            from model.transformer.base_transformer_input_3types_AgentAwareAttention import BaseTransformer
-        elif model == "BaseTransformer_flattened_aete":
-            from model.transformer.base_transformer_input_flattened_aete import BaseTransformer
-        elif model == "BaseTransformer_flattened_AgentAwareAttention":
-            from model.transformer.base_transformer_input_flattened_AgentAwareAttention import BaseTransformer
+    if "BaseTransformer" in args.model:
+        if args.model == "BaseTransformer":
+            from model.transformer.base_transformer import BaseTransformer
+        elif args.model == "BaseTransformer_sensor_first_no_pe":
+            from model.transformer.base_transformer_sensor_first import BaseTransformer
+        elif args.model == "BaseTransformer_3types_aete":
+            from model.transformer.base_transformer_3types_aete import BaseTransformer
+        elif args.model == "BaseTransformer_3types_AgentAwareAttention":
+            from model.transformer.base_transformer_3types_AgentAwareAttention import BaseTransformer
+        elif args.model == "BaseTransformer_flattened_aete":
+            from model.transformer.base_transformer_flattened_aete import BaseTransformer
+        elif args.model == "BaseTransformer_flattened_AgentAwareAttention":
+            from model.transformer.base_transformer_flattened_AgentAwareAttention import BaseTransformer
 
-        return BaseTransformer(look_back=look_back, dim=dim, depth=depth, heads=heads, fc_dim=fc_dim, dim_head=dim_head, dropout=dropout, emb_dropout=emb_dropout)
+        return BaseTransformer(args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
 
     return None

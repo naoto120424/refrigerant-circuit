@@ -1,9 +1,8 @@
 import torch
 from torch import nn
-import math
 import matplotlib.pyplot as plt
-import os
 import numpy as np
+import os, math
 
 from copy import deepcopy
 from einops import rearrange, repeat

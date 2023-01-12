@@ -1,7 +1,8 @@
 import torch
 from torch import nn
-import math
 import matplotlib.pyplot as plt
+import numpy as np
+import os, math
 
 from copy import deepcopy
 from einops import rearrange, repeat
@@ -70,53 +71,51 @@ class TimeEncoding(nn.Module):
 
 
 class InputEmbedding(nn.Module):
-    def __init__(self, look_back, num_control_features, num_byproduct_features, num_target_features, dim):
+    def __init__(self, look_back, num_all_features, num_control_features, dim):
         super(InputEmbedding, self).__init__()
         self.look_back = look_back
+        self.num_all_features = num_all_features
         self.num_control_features = num_control_features
-        self.num_byproduct_features = num_byproduct_features
-        self.num_target_features = num_target_features
 
-        self.control_embedding = nn.Linear(num_control_features, dim)
-        self.byproduct_embedding = nn.Linear(num_byproduct_features, dim)
-        self.target_embedding = nn.Linear(num_target_features, dim)
+        self.input_emb_list = clones(nn.Linear(1, dim), self.num_all_features)
 
-        self.agent_encoding = AgentEncoding(dim, self.look_back)
         self.time_encoding = TimeEncoding(dim, self.look_back)
+        self.agent_encoding = AgentEncoding(dim, self.look_back)
 
     def forward(self, x):
-        control = self.control_embedding(x[:, :, : self.num_control_features])
-        # control += self.positional_embedding(control)
-        # print('control embedding: ', control.shape)
-        byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
-        # byproduct += self.positional_embedding(byproduct)
-        # print('byproduct embedding: ', byproduct.shape)
-        target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
-        # target += self.positional_embedding(target)
-        # print('target embedding: ', target.shape)
-
-        x = torch.cat([control, byproduct, target], dim=1)
-        x += self.agent_encoding(x)
-        x += self.time_encoding(x)
+        x = torch.unsqueeze(x, 2)
+        # print(x.shape)
+        for i, input_embedding in enumerate(self.input_emb_list):
+            if i == 0:
+                input_emb_all = input_embedding(x[:, :, :, i])
+            else:
+                input_emb = input_embedding(x[:, :, :, i])
+                input_emb_all = torch.cat((input_emb_all, input_emb), dim=1)
+        # print(input_emb_all.shape)
+        input_emb_all += self.agent_encoding(input_emb_all)
+        input_emb_all += self.time_encoding(input_emb_all)
+        # print('input emb all', input_emb_all.shape)
 
         """
-        # time encoding visualization
-        te = self.time_encoding(x).to("cpu").detach().numpy().copy()
+        img_path = os.path.join("img", "inp_flattened", "encoding")
+        os.makedirs(img_path, exist_ok=True)
+        # positional encoding visualization
+        te = self.time_encoding(input_emb_all).to("cpu").detach().numpy().copy()
         print("te", te.shape)
         fig = plt.figure()
         plt.imshow(te[0])
         plt.colorbar()
-        plt.savefig("img/time_encoding_input_3types.png")
+        plt.savefig("img/inp_flattened/encoding/time_encoding_input_flattened.png")
         # agent encoding visualization
-        ae = self.agent_encoding(x).to("cpu").detach().numpy().copy()
+        ae = self.agent_encoding(input_emb_all).to("cpu").detach().numpy().copy()
         print("ae", ae.shape)
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("img/agent_encoding_input_3types.png")
+        plt.savefig("img/inp_flattened/encoding/agent_encoding_input_flattened.png")
         """
 
-        return x
+        return input_emb_all
 
 
 class PreNorm(nn.Module):
@@ -144,9 +143,12 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 
-class Attention(nn.Module):
-    def __init__(self, dim, heads=20, dim_head=1600, dropout=0.1):
+class AgentAwareAttention(nn.Module):
+    def __init__(self, dim, num_agent=200, look_back=20, num_control_features=9, heads=20, dim_head=1600, dropout=0.1):
         super().__init__()
+        self.num_agent = num_agent
+        self.num_control_features = num_control_features
+        self.look_back = look_back
         inner_dim = dim_head * heads
         project_out = not (heads == 1 and dim_head == dim)
 
@@ -155,31 +157,57 @@ class Attention(nn.Module):
 
         self.attend = nn.Softmax(dim=-1)
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
+        self.to_qk_self = nn.Linear(dim, inner_dim * 2, bias=False)
 
         self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
+
+        attn_mask = torch.eye(self.num_agent)
+        attn_mask = attn_mask.repeat_interleave(self.look_back, dim=1)
+        attn_mask = attn_mask.repeat_interleave(self.look_back, dim=0)
+        attn_mask = torch.cat([attn_mask, torch.zeros(attn_mask.size(0), self.num_control_features)], dim=1)
+        attn_mask = torch.cat([attn_mask, torch.zeros(self.num_control_features, attn_mask.size(1))], dim=0)
+        self.attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
+
+        """
+        img_path = os.path.join("img", "inp_flattened", "attention")
+        os.makedirs(img_path, exist_ok=True)
+        fig = plt.figure()
+        plt.imshow(attn_mask, cmap="Blues")
+        plt.colorbar()
+        plt.savefig("img/inp_flattened/attention/attention_mask_input_flattened.png")
+        """
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
         q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
 
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        qk_self = self.to_qk_self(x).chunk(2, dim=-1)
+        q_self, k_self = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qk_self)
 
-        attn = self.attend(dots)
+        attn_mask = self.attn_mask
+        attn_mask = attn_mask.to(x.device)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        dots_self = torch.matmul(q_self, k_self.transpose(-1, -2)) * self.scale
+        dots_all = attn_mask * dots_self + (1 - attn_mask) * dots
+
+        attn = self.attend(dots_all)
 
         out = torch.matmul(attn, v)
         out = rearrange(out, "b h n d -> b n (h d)")
+
         return self.to_out(out), attn
 
 
 class Transformer(nn.Module):
-    def __init__(self, dim, depth, heads, dim_head, fc_dim, dropout=0.1):
+    def __init__(self, dim, num_agent, look_back, num_control_features, depth, heads, dim_head, fc_dim, dropout=0.1):
         super().__init__()
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)),
+                        PreNorm(dim, AgentAwareAttention(dim, num_agent, look_back, num_control_features, heads=heads, dim_head=dim_head, dropout=dropout)),
                         PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
                     ]
                 )
@@ -205,15 +233,16 @@ class BaseTransformer(nn.Module):
         self.num_pred_features = 30
         self.num_byproduct_features = 27
         self.num_target_features = 3
+        self.num_agent = 36
         self.look_back = look_back
 
-        self.input_embedding = InputEmbedding(self.look_back, self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
+        self.input_embedding = InputEmbedding(self.look_back, self.num_all_features, self.num_control_features, dim)
 
         self.dropout = nn.Dropout(emb_dropout)
 
         self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
 
-        self.transformer = Transformer(dim, depth, heads, dim_head, fc_dim, dropout)
+        self.transformer = Transformer(dim, self.num_agent, self.look_back, self.num_control_features, depth, heads, dim_head, fc_dim, dropout)
 
         self.generator = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features))
 

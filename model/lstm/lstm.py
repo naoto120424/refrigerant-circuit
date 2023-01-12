@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, look_back, num_layers=2, num_hidden_units=256, spec_dim=6, output_dim=30, dropout=0.2):
+    def __init__(self, look_back, num_layers=2, num_hidden_units=256, dropout=0.2, spec_dim=6, output_dim=30):
         super(LSTMClassifier, self).__init__()
         self.input_dim = 36
         self.num_hidden_units = num_hidden_units
