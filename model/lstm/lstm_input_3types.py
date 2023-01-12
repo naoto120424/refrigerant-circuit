@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, look_back, num_layers=2, num_hidden_units=256, spec_dim=6, output_dim=30, dropout=0.2):
+    def __init__(self, look_back, num_layers=2, num_hidden_units=256, dropout=0.2):
         super(LSTMClassifier, self).__init__()
         self.num_all_features = 36
         self.num_control_features = 6
@@ -36,11 +36,11 @@ class LSTMClassifier(nn.Module):
             batch_first=True,
         )
 
-        self.spec_dense = nn.Linear(spec_dim, num_hidden_units)
+        self.spec_dense = nn.Linear(self.num_all_features, num_hidden_units)
         self.predicter = nn.Sequential(
             nn.Linear(num_hidden_units * 4, num_hidden_units),
             nn.ReLU(inplace=True),
-            nn.Linear(num_hidden_units, output_dim),
+            nn.Linear(num_hidden_units, self.num_pred_features),
         )
 
     def forward(self, x, spec, h=None):

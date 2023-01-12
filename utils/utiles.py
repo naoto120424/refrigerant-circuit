@@ -24,7 +24,7 @@ fixed_case_list = {
 model_list = {
     "LSTM",
     "BaseTransformer",
-    "BaseTransformer_sensor_first_no_pe",
+    "BaseTransformer_sensor_first",
     "BaseTransformer_3types_aete",
     "BaseTransformer_3types_AgentAwareAttention",
     "BaseTransformer_flattened_aete",
@@ -55,7 +55,7 @@ def modelDecision(args):
     if "BaseTransformer" in args.model:
         if args.model == "BaseTransformer":
             from model.transformer.base_transformer import BaseTransformer
-        elif args.model == "BaseTransformer_sensor_first_no_pe":
+        elif args.model == "BaseTransformer_sensor_first":
             from model.transformer.base_transformer_sensor_first import BaseTransformer
         elif args.model == "BaseTransformer_3types_aete":
             from model.transformer.base_transformer_3types_aete import BaseTransformer
