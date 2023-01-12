@@ -1,14 +1,11 @@
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
-import mlflow
-import shutil
-import argparse
-import time
-import datetime
+import time, datetime
+import mlflow, shutil, argparse
 
-from utils.dataloader import *
 from utils.utiles import *
+from utils.dataloader import *
 from utils.visualization import *
 from utils.earlystopping import EarlyStopping
 from sklearn.model_selection import train_test_split
@@ -19,7 +16,7 @@ def main():
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bs", type=int, default=16)
-    parser.add_argument("--epoch", type=int, default=1000)
+    parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -29,7 +26,7 @@ def main():
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--emb_dropout", type=float, default=0.1)
     parser.add_argument("--debug", type=bool, default=False)
-    parser.add_argument("--model", type=str, default="BaseTransformer_only1pe")
+    parser.add_argument("--model", type=str, default="BaseTransformer")
     parser.add_argument("--criterion", type=str, default="MSE")
     parser.add_argument("--patience", type=int, default=7)
     parser.add_argument("--delta", type=float, default=1e-3)
@@ -75,7 +72,7 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
 
-    model = modelDecision(args.model, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout) if args.model in model_list else print(f"unknown model name")
+    model = modelDecision(args) if args.model in model_list else print(f"unknown model name")
     criterion = criterion_list[args.criterion] if args.criterion in criterion_list else print(f"unknown criterion name")
 
     model.to(device)
@@ -157,10 +154,7 @@ def main():
         model.eval()
 
         for test_index in tqdm(test_index_list):
-            if test_index in np.arange(0, num_fixed_data):
-                case_name = list(fixed_case_list)[test_index]
-            else:
-                case_name = f"case{str(test_index-num_fixed_data+1).zfill(4)}"
+            case_name = list(fixed_case_list)[test_index] if test_index in np.arange(0, num_fixed_data) else f"case{str(test_index-num_fixed_data+1).zfill(4)}"
 
             output_feature_name = data["feature_name"][num_control_features + 1 :]
             output_feature_unit = data["feature_unit"][num_control_features + 1 :]

@@ -1,27 +1,25 @@
-import torch
-import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import os, mlflow
 
-from einops import rearrange
 from sklearn.metrics import mean_absolute_error
 
 target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"}
 target_kW_unit = {"kW", "kW", "kW", "MPa"}
+evaluation_list = {"ade", "fde", "mde", "pde"}
 
 score_list_dict = {
-    "ACDS_kW": {"ade": [], "fde": [], "mde": []},
-    "Comp_kW": {"ade": [], "fde": [], "mde": []},
-    "Eva_kW": {"ade": [], "fde": [], "mde": []},
-    "Comp_OutP": {"ade": [], "fde": [], "mde": []},
+    "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
 
 test_score_list_dict = {
-    "ACDS_kW": {"ade": [], "fde": [], "mde": []},
-    "Comp_kW": {"ade": [], "fde": [], "mde": []},
-    "Eva_kW": {"ade": [], "fde": [], "mde": []},
-    "Comp_OutP": {"ade": [], "fde": [], "mde": []},
+    "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
 
 target_kW_visualization = {
@@ -50,16 +48,18 @@ def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_
                 score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 score_list_dict[output_feature_name[i]]["fde"].append(fde)
                 score_list_dict[output_feature_name[i]]["mde"].append(mde)
+                score_list_dict[output_feature_name[i]]["pde"].append(pde)
             else:
                 test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
                 test_score_list_dict[output_feature_name[i]]["mde"].append(mde)
+                test_score_list_dict[output_feature_name[i]]["pde"].append(pde)
 
 
 # 計算した評価を保存する関数
 def save_evaluation(result_path):
     for target in target_kW:
-        for evaluation in ["ade", "fde", "mde"]:
+        for evaluation in evaluation_list:
             np_array = np.array(score_list_dict[target][evaluation])
             np_array_test = np.array(test_score_list_dict[target][evaluation])
             mlflow.log_metric(f"{target}_{evaluation.upper()}_mean", np.mean(np_array))
@@ -147,10 +147,12 @@ def attention_visualization(attn_all, depth, heads, result_path, case_name):
                 os.makedirs(img_path, exist_ok=True)
                 """
                 for head in range(heads):
+                    head_path = os.path.join(img_path, str(j+1))
+                    os.makedirs(head_path, exist_ok=True)
                     fig = plt.figure()
                     plt.imshow(np.array(attn[j, head, :, :]), cmap="Reds")
                     plt.colorbar()
-                    plt.savefig(os.path.join(img_path, f"attention_depth{j+1}_heads{head+1}.png"))
+                    plt.savefig(os.path.join(head_path, f"attention_heads{head+1}.png"))
                     plt.close()
                 """
                 attn_mean = np.mean(attn[j], axis=0)
