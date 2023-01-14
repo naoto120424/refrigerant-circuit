@@ -28,7 +28,7 @@ class LSTMClassifier(nn.Module):
             self.input_dim,
         )
         self.spec_dense = nn.Linear(self.spec_dim, num_hidden_units)
-        self.predicter = nn.Sequential(
+        self.predictor = nn.Sequential(
             nn.Linear(num_hidden_units * (self.input_dim + 1), num_hidden_units),
             nn.ReLU(inplace=True),
             nn.Linear(num_hidden_units, self.output_dim),
@@ -49,5 +49,5 @@ class LSTMClassifier(nn.Module):
         # print(hidden1_all.shape)
         hidden2 = self.spec_dense(spec)
         # print(hidden2.shape)
-        y = self.predicter(torch.cat([hidden1_all, hidden2], dim=1))  # 最後のセルだけを取り出している
+        y = self.predictor(torch.cat([hidden1_all, hidden2], dim=1))  # 最後のセルだけを取り出している
         return y
