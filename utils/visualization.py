@@ -30,10 +30,10 @@ target_kW_visualization = {
 }
 
 """
-    ade: average displacement error (全時刻の誤差の平均)
-    fde: final displacement error (最終時刻の誤差)
-    mde: max displacement error (全時刻の誤差の最大値)
-    pde: peek displacement error (ピーク値の誤差)
+    ade: average displacement error (Average of all time errors)
+    fde: final displacement error (Error of the last time)
+    mde: max displacement error (Maximum error of all times)
+    pde: peek displacement error (Error of peak value )
 """
 
 # Calculate Evaluation

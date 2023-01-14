@@ -34,7 +34,7 @@ model_list = {
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
 
 
-# シード値
+# seed
 def seed_everything(seed=42):
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
@@ -44,7 +44,7 @@ def seed_everything(seed=42):
     torch.backends.cudnn.deterministic = True
 
 
-# モデルを決定する関数
+# model Decide function from model name
 def modelDecision(args):
     if "LSTM" in args.model:
         if args.model == "LSTM":
@@ -69,3 +69,12 @@ def modelDecision(args):
         return BaseTransformer(args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
 
     return None
+
+
+def CaseNameDecision(test_index):
+    if test_index not in np.arange(num_fixed_data):
+        case_name = f"case{str(test_index-num_fixed_data+1).zfill(4)}"
+    else:
+        case_name = list(fixed_case_list)[test_index]
+
+    return case_name

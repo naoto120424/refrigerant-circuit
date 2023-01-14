@@ -8,7 +8,7 @@ from tqdm import tqdm
 from einops import rearrange
 
 
-# データ間引き関数
+# Data decimate
 def decimate(data):
     dt = 1
     new_data = []
@@ -17,15 +17,15 @@ def decimate(data):
         if data[i, 0] > pick_time:
             x = data[i, 0], data[i - 1, 0]
             y = data[i, :], data[i - 1, :]
-            a, b = np.polyfit(x, y, 1)  # n秒とn+0.1秒間の線形の近似式の傾きa、切片bを求める
-            new_data.append([a * pick_time + b])  # n秒のデータを近似式から求める
+            a, b = np.polyfit(x, y, 1)  # Find the slope a and intercept b of the linear approximation equation for n seconds and n+0.1 seconds
+            new_data.append([a * pick_time + b])  # n seconds of data is obtained from an approximate formula
             pick_time += dt
     new_data = np.array(new_data)
     new_data = np.reshape(new_data, (new_data.shape[0], new_data.shape[2]))
     return new_data
 
 
-# 全データをロードする関数
+# Load All Data
 def load_data(look_back=20):
     print("Load Data")
     print("----------------------------------------------")
@@ -73,7 +73,7 @@ def load_data(look_back=20):
     return data
 
 
-# 訓練データから標準化用の平均と標準偏差を求める関数
+# Calculate mean & std for scaling from train data
 def find_meanstd(train_index_list):
     data_path = "../dataset/"
     csv_files = os.listdir(data_path)
@@ -92,8 +92,8 @@ def find_meanstd(train_index_list):
     for i in range(input_array.shape[2]):
         mean_list.append(input_array[:, :, i].mean())
         std_list.append(input_array[:, :, i].std())
-    # print("平均", len(mean_list), mean_list)
-    # print("標準偏差", len(std_list), std_list)
+    # print("Mean: ", len(mean_list), mean_list)
+    # print("Std : ", len(std_list), std_list)
     return mean_list, std_list
 
 
@@ -120,7 +120,6 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     input_data_list = []
     spec_data_list = []
     gt_data_list = []
-    data_name_list = []
 
     for index in index_list:
         input_data_list.append(original_data["inp"][index])
@@ -130,22 +129,21 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     spec_array = np.array(spec_data_list)
     gt_array = np.array(gt_data_list)
 
-    """入力の標準化処理"""
     mean_list, std_list = find_meanstd(index_list) if is_train else (mean_list, std_list)
     print("\n\nTrain Dataset Normalization") if is_train else print("\n\nValidation Dataset Normalization")
     print("----------------------------------------------")
 
-    """入力[look_back秒分]のデータの標準化"""
+    # scaling input data
     print("[input]")
     for i in tqdm(range(input_array.shape[3])):
         input_array[:, :, :, i] = (input_array[:, :, :, i] - mean_list[i]) / std_list[i]
 
-    """入力[制御条件]のデータの標準化"""
+    # scaling spec data
     print("\n[spec]")
     for i in tqdm(range(spec_array.shape[2])):
         spec_array[:, :, i] = (spec_array[:, :, i] - mean_list[i]) / std_list[i]
 
-    """出力のデータの標準化"""
+    # scaling ground truth data
     print("\n[ground truth]")
     for i in tqdm(range(gt_array.shape[2])):
         gt_array[:, :, i] = (gt_array[:, :, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]

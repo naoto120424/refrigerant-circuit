@@ -54,8 +54,8 @@ def main():
         mlflow.log_param("emb_dropout", args.emb_dropout)
 
     seed_everything(seed=args.seed)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     data = load_data(look_back=args.look_back)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, len(data["inp"])), test_size=200)
@@ -95,8 +95,8 @@ def main():
     print(f"Criterion   : {args.criterion}")
     print(f"Look Back   : {args.look_back}")
     print(f"Batch Size  : {args.bs}")
-    print(f"train case  : {len(train_index_list)}")
-    print(f"val case    : {len(val_index_list)}")
+    print(f"Train Case  : {len(train_index_list)}")
+    print(f"Val Case    : {len(val_index_list)}")
     train_start_time = time.perf_counter()
     for epoch in range(1, epoch_num + 1):
         print("----------------------------------------------")
@@ -110,13 +110,15 @@ def main():
             gt = batch["gt"].to(device)
 
             pred, _ = model(inp, spec)
+
             loss = criterion(pred, gt)
             loss.backward()
+
             epoch_loss += loss.item() * inp.size(0)
             optimizer.step()
+
         epoch_loss = epoch_loss / len(train_dataloader)
-        print(f"Train Loss: {epoch_loss:.6f}")
-        mlflow.log_metric(f"train loss", epoch_loss, step=epoch)
+        print(f"Train Loss: {epoch_loss}")
 
         with torch.no_grad():
             model.eval()
@@ -127,12 +129,15 @@ def main():
                 gt = batch["gt"].to(device)
 
                 pred, _ = model(inp, spec)
+
                 test_error = torch.mean(torch.abs(gt - pred))
                 epoch_test_error += test_error.item() * inp.size(0)
 
             epoch_test_error = epoch_test_error / len(val_dataloader)
-            print(f"Val Loss: {epoch_test_error:.6f}")
-            mlflow.log_metric(f"val loss", epoch_test_error, step=epoch)
+            print(f"Val Loss: {epoch_test_error}")
+
+        mlflow.log_metric(f"train loss", epoch_loss, step=epoch)
+        mlflow.log_metric(f"val loss", epoch_test_error, step=epoch)
 
         result_path = os.path.join("..", "result")
         os.makedirs(result_path, exist_ok=True)
@@ -154,7 +159,7 @@ def main():
         model.eval()
 
         for test_index in tqdm(test_index_list):
-            case_name = list(fixed_case_list)[test_index] if test_index in np.arange(0, num_fixed_data) else f"case{str(test_index-num_fixed_data+1).zfill(4)}"
+            case_name = CaseNameDecision(test_index)
 
             output_feature_name = data["feature_name"][num_control_features + 1 :]
             output_feature_unit = data["feature_unit"][num_control_features + 1 :]
@@ -164,9 +169,9 @@ def main():
 
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
-            for i in range(scaling_input_data.shape[1]):
+            for i in range(scaling_input_data.shape[1]):  # input scaling
                 scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i]) / std_list[i]
-            for i in range(scaling_spec_data.shape[1]):
+            for i in range(scaling_spec_data.shape[1]):  # spec scaling
                 scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
 
             attn_all = []
@@ -175,35 +180,37 @@ def main():
             for i in range(scaling_spec_data.shape[0]):
                 input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
+
                 scaling_pred_data, attn = model(input, spec)
                 scaling_pred_data = scaling_pred_data.detach().to("cpu").numpy().copy()[0]
                 new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
                 scaling_input_data = np.concatenate([scaling_input_data, new_scaling_input_data], axis=0)
+
                 if "BaseTransformer" in args.model:
                     attn = attn.detach().to("cpu").numpy().copy()
                     attn_all.append(attn)
             end_time = time.perf_counter()
             predict_time_list.append(end_time - start_time)
 
-            pred_data = scaling_input_data.copy()
-            for i in range(scaling_input_data.shape[1]):
-                pred_data[:, i] = pred_data[:, i] * std_list[i] + mean_list[i]
-            pred_output_data = pred_data[:, num_control_features:]
-            scaling_pred_output_data = scaling_input_data[:, num_control_features:]
+            pred_output_data = scaling_input_data.copy()
+            for i in range(scaling_input_data.shape[1]):  # undo scaling
+                pred_output_data[:, i] = pred_output_data[:, i] * std_list[i] + mean_list[i]
+            pred_data = pred_output_data[:, num_control_features:]
+            scaling_pred_data = scaling_input_data[:, num_control_features:]
 
-            gt_output_data = []
+            gt_data = []
             for inp in inp_data[0]:
-                gt_output_data.append(inp[num_control_features:])
+                gt_data.append(inp[num_control_features:])
             for gt in gt_data:
-                gt_output_data.append(gt)
+                gt_data.append(gt)
 
-            scaling_gt_output_data = np.zeros(np.array(gt_output_data).shape)
-            for i in range(np.array(gt_output_data).shape[1]):
-                scaling_gt_output_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
+            scaling_gt_data = np.zeros(np.array(gt_data).shape)
+            for i in range(np.array(gt_data).shape[1]):
+                scaling_gt_data[:, i] = (np.array(gt_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 
-            evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data)
-            visualization(scaling_gt_output_data, scaling_pred_output_data, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=True)
-            visualization(gt_output_data, pred_output_data, output_feature_name, output_feature_unit, case_name, result_path)
+            evaluation(test_index, gt_data, pred_data, output_feature_name, num_fixed_data)
+            visualization(gt_data, pred_data, output_feature_name, output_feature_unit, case_name, result_path)
+            visualization(scaling_gt_data, scaling_pred_data, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=True)
             attention_visualization(args, attn_all, result_path, case_name) if "BaseTransformer" in args.model else None
 
     save_evaluation(result_path)
