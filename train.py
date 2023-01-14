@@ -21,8 +21,8 @@ def main():
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
     parser.add_argument("--heads", type=int, default=8)
-    parser.add_argument("--fc_dim", type=int, default=2048)
     parser.add_argument("--dim_head", type=int, default=64)
+    parser.add_argument("--fc_dim", type=int, default=2048)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--emb_dropout", type=float, default=0.1)
     parser.add_argument("--debug", type=bool, default=False)
@@ -49,8 +49,8 @@ def main():
     mlflow.log_param("dropout", args.dropout)
     if "BaseTransformer" in args.model:
         mlflow.log_param("heads", args.heads)
-        mlflow.log_param("fc_dim", args.fc_dim)
         mlflow.log_param("dim_head", args.dim_head)
+        mlflow.log_param("fc_dim", args.fc_dim)
         mlflow.log_param("emb_dropout", args.emb_dropout)
 
     seed_everything(seed=args.seed)
@@ -204,7 +204,7 @@ def main():
             evaluation(test_index, gt_output_data, pred_output_data, output_feature_name, num_fixed_data)
             visualization(scaling_gt_output_data, scaling_pred_output_data, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=True)
             visualization(gt_output_data, pred_output_data, output_feature_name, output_feature_unit, case_name, result_path)
-            attention_visualization(attn_all, args.depth, args.heads, result_path, case_name) if "BaseTransformer" in args.model else None
+            attention_visualization(args, attn_all, result_path, case_name) if "BaseTransformer" in args.model else None
 
     save_evaluation(result_path)
     mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))

@@ -4,9 +4,9 @@ import os, mlflow
 
 from sklearn.metrics import mean_absolute_error
 
-target_kW = {"ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"}
-target_kW_unit = {"kW", "kW", "kW", "MPa"}
-evaluation_list = {"ade", "fde", "mde", "pde"}
+target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"]
+target_kW_unit = ["kW", "kW", "kW", "MPa"]
+evaluation_list = ["ade", "fde", "mde", "pde"]
 
 score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
@@ -103,34 +103,19 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
             target_kW_visualization[output_feature_name[i]]["pred"] = np.array(pred_array)[:, i]
             target_kW_visualization[output_feature_name[i]]["gt"] = np.array(gt_array)[:, i]
 
-    fig = plt.figure(figsize=(8, 16))
-    ax1 = fig.add_subplot(4, 1, 1)
-    ax2 = fig.add_subplot(4, 1, 2)
-    ax3 = fig.add_subplot(4, 1, 3)
-    ax4 = fig.add_subplot(4, 1, 4)
-
-    ax1.plot(np.array(target_kW_visualization["ACDS_kW"]["gt"]), color="#e46409", label="gt")
-    ax1.plot(np.array(target_kW_visualization["ACDS_kW"]["pred"]), color="b", label="pred")
-    ax2.plot(np.array(target_kW_visualization["Comp_kW"]["gt"]), color="#e46409", label="gt")
-    ax2.plot(np.array(target_kW_visualization["Comp_kW"]["pred"]), color="b", label="pred")
-    ax3.plot(np.array(target_kW_visualization["Eva_kW"]["gt"]), color="#e46409", label="gt")
-    ax3.plot(np.array(target_kW_visualization["Eva_kW"]["pred"]), color="b", label="pred")
-    ax4.plot(np.array(target_kW_visualization["Comp_OutP"]["gt"]), color="#e46409", label="gt")
-    ax4.plot(np.array(target_kW_visualization["Comp_OutP"]["pred"]), color="b", label="pred")
-
-    ax1.set_xlabel("Time[s]")
-    ax1.set_ylabel("ACDS_kW[kW]")
-    ax2.set_xlabel("Time[s]")
-    ax2.set_ylabel("Comp_kW[kW]")
-    ax3.set_xlabel("Time[s]")
-    ax3.set_ylabel("Eva_kW[kW]")
-    ax4.set_xlabel("Time[s]")
-    ax4.set_ylabel("Comp_OutP[MPa]")
-
-    ax1.legend(loc="best")
-    ax2.legend(loc="best")
-    ax3.legend(loc="best")
-    ax4.legend(loc="best")
+    grf_row = 4
+    grf_col = 1
+    fig = plt.figure(figsize=(grf_col * 8, grf_row * 4))
+    ax_list = []
+    for j in range(grf_row):
+        for i in range(grf_col):
+            if (j * grf_col + i) < len(target_kW):
+                ax_list.append(fig.add_subplot(grf_row, grf_col, j * grf_col + i + 1))
+                ax_list[j * grf_col + i].plot(target_kW_visualization[target_kW[j * grf_col + i]]["gt"], color="#e46409", label="gt")
+                ax_list[j * grf_col + i].plot(target_kW_visualization[target_kW[j * grf_col + i]]["pred"], color="b", label="pred")
+                ax_list[j * grf_col + i].set_xlabel(f"Time[s]")
+                ax_list[j * grf_col + i].set_ylabel(f"{target_kW[j * grf_col + i]}[{target_kW_unit[j * grf_col + i]}]")
+                ax_list[j * grf_col + i].legend(loc="best")
 
     fig.tight_layout()
     plt.savefig(os.path.join(img_path, f"target_kW.png"))
@@ -138,26 +123,26 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
 
 
 # アテンションマップを可視化する関数
-def attention_visualization(attn_all, depth, heads, result_path, case_name):
+def attention_visualization(args, attn_all, result_path, case_name):
     for i in range(len(attn_all)):
         if i % 50 == 0:
             attn = attn_all[i]
-            for j in range(depth):
+            for depth in range(args.depth):
                 img_path = os.path.join(result_path, "attention", case_name, str(i + 1))
                 os.makedirs(img_path, exist_ok=True)
                 """
-                for head in range(heads):
-                    head_path = os.path.join(img_path, str(j+1))
+                for head in range(args.heads):
+                    head_path = os.path.join(img_path, str(depth+1))
                     os.makedirs(head_path, exist_ok=True)
                     fig = plt.figure()
-                    plt.imshow(np.array(attn[j, head, :, :]), cmap="Reds")
+                    plt.imshow(np.array(attn[depth, head, :, :]), cmap="Reds")
                     plt.colorbar()
                     plt.savefig(os.path.join(head_path, f"attention_heads{head+1}.png"))
                     plt.close()
                 """
-                attn_mean = np.mean(attn[j], axis=0)
+                attn_mean = np.mean(attn[depth], axis=0)
                 fig = plt.figure()
                 plt.imshow(np.array(attn_mean), cmap="Reds")
                 plt.colorbar()
-                plt.savefig(os.path.join(img_path, f"attention_mean_depth{j+1}.png"))
+                plt.savefig(os.path.join(img_path, f"attention_mean_depth{depth+1}.png"))
                 plt.close()
