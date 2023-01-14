@@ -36,7 +36,7 @@ target_kW_visualization = {
     pde: peek displacement error (ピーク値の誤差)
 """
 
-# 評価を計算する関数
+# Calculate Evaluation
 def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_data=8):
     for i in range(len(output_feature_name)):
         if output_feature_name[i] in target_kW:
@@ -56,7 +56,7 @@ def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_
                 test_score_list_dict[output_feature_name[i]]["pde"].append(pde)
 
 
-# 計算した評価を保存する関数
+# Save Evaluation
 def save_evaluation(result_path):
     for target in target_kW:
         for evaluation in evaluation_list:
@@ -83,7 +83,7 @@ def save_evaluation(result_path):
             f.close()
 
 
-# グラフを作る関数
+# Make Graph
 def visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=False):
     img_path = os.path.join(result_path, "img", "normalized", case_name) if is_normalized else os.path.join(result_path, "img", "original_scale", case_name)
     os.makedirs(img_path, exist_ok=True)
@@ -103,6 +103,7 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
             target_kW_visualization[output_feature_name[i]]["pred"] = np.array(pred_array)[:, i]
             target_kW_visualization[output_feature_name[i]]["gt"] = np.array(gt_array)[:, i]
 
+    # For PowerPoint Slide
     grf_row = 4
     grf_col = 1
     fig = plt.figure(figsize=(grf_col * 8, grf_row * 4))
@@ -122,7 +123,7 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
     plt.close()
 
 
-# アテンションマップを可視化する関数
+# Make AttentionMap Graph
 def attention_visualization(args, attn_all, result_path, case_name):
     for i in range(len(attn_all)):
         if i % 50 == 0:

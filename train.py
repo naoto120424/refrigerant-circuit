@@ -89,8 +89,8 @@ def main():
     print(f" -dropout    : {args.dropout}")
     if "BaseTransformer" in args.model:
         print(f" -heads      : {args.heads}")
-        print(f" -fc_dim     : {args.fc_dim}")
         print(f" -dim_head   : {args.dim_head}")
+        print(f" -fc_dim     : {args.fc_dim}")
         print(f" -emb_dropout: {args.emb_dropout}")
     print(f"Criterion   : {args.criterion}")
     print(f"Look Back   : {args.look_back}")

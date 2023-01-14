@@ -15,10 +15,10 @@ fixed_case_list = {
     "fixed_case0002_Comp_rpm_Swing_test_VF_Fix",
     "fixed_case0003_Comp_rpm_Swing_test_VF_Fix",
     "fixed_case0004_Comp_rpm_Swing_test_VF_Fix",
-    "fixed_case0001_EXV_Swinbg_test_VF_Fix",
-    "fixed_case0002_EXV_Swinbg_test_VF_Fix",
-    "fixed_case0003_EXV_Swinbg_test_VF_Fix",
-    "fixed_case0004_EXV_Swinbg_test_VF_Fix",
+    "fixed_case0001_EXV_Swing_test_VF_Fix",
+    "fixed_case0002_EXV_Swing_test_VF_Fix",
+    "fixed_case0003_EXV_Swing_test_VF_Fix",
+    "fixed_case0004_EXV_Swing_test_VF_Fix",
 }
 
 model_list = {
