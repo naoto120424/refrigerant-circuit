@@ -178,7 +178,8 @@ class AgentAwareAttention(nn.Module):
         fig = plt.figure()
         plt.imshow(attn_mask, cmap="Blues")
         plt.colorbar()
-        plt.savefig("img/inp_3types/attention/attention_mask_input_3types.png")
+        plt.savefig(f"img/inp_3types/attention/attention_mask_input_3types_lookback{self.look_back}.png")
+        print("save fig")
         """
 
     def forward(self, x):

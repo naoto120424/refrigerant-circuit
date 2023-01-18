@@ -64,7 +64,7 @@ def main():
         train_index_list, test_index_list = train_test_split(np.arange(num_fixed_data, num_fixed_data + 100), test_size=10)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
 
-    test_index_list = np.append(test_index_list, np.arange(0, num_fixed_data))
+    test_index_list = np.append(test_index_list, np.arange(num_fixed_data))
 
     train_dataset, mean_list, std_list = create_dataset(data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
@@ -198,18 +198,18 @@ def main():
             pred_data = pred_output_data[:, num_control_features:]
             scaling_pred_data = scaling_input_data[:, num_control_features:]
 
-            gt_data = []
+            gt_output_data = []
             for inp in inp_data[0]:
-                gt_data.append(inp[num_control_features:])
+                gt_output_data.append(inp[num_control_features:])
             for gt in gt_data:
-                gt_data.append(gt)
+                gt_output_data.append(gt)
 
-            scaling_gt_data = np.zeros(np.array(gt_data).shape)
-            for i in range(np.array(gt_data).shape[1]):
-                scaling_gt_data[:, i] = (np.array(gt_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
+            scaling_gt_data = np.zeros(np.array(gt_output_data).shape)
+            for i in range(np.array(gt_output_data).shape[1]):
+                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + num_control_features]) / std_list[i + num_control_features]
 
-            evaluation(test_index, gt_data, pred_data, output_feature_name, num_fixed_data)
-            visualization(gt_data, pred_data, output_feature_name, output_feature_unit, case_name, result_path)
+            evaluation(test_index, gt_output_data, pred_data, output_feature_name, num_fixed_data)
+            visualization(gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, result_path)
             visualization(scaling_gt_data, scaling_pred_data, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=True)
             attention_visualization(args, attn_all, result_path, case_name) if "BaseTransformer" in args.model else None
 
