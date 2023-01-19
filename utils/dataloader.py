@@ -26,14 +26,11 @@ def decimate(data):
 
 
 # Load All Data
-def load_data(look_back=20):
+def load_data(cfg, look_back=20):
     print("Load Data")
     print("----------------------------------------------")
-    data_path = "../dataset/"
-    csv_files = os.listdir(data_path)
+    csv_files = os.listdir(cfg.DATA_PATH)
     csv_files.sort()
-
-    num_control_features = 6
 
     data = {}
     Xdata = []
@@ -41,12 +38,12 @@ def load_data(look_back=20):
     Ydata = []
 
     for file in tqdm(csv_files):
-        csv_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
+        csv_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
         # single_data = csv_data[:, 1:] # No decimate function
-        single_data = np.delete(single_data, [8, 6, 5], axis=1)  # Chiller
-        spec_data = single_data[:, :num_control_features]
-        output_data = single_data[:, num_control_features:]
+        # single_data = np.delete(single_data, [8, 6, 5], axis=1)  # Delete Chiller for step1
+        spec_data = single_data[:, : cfg.NUM_CONTROL_FEATURES]
+        output_data = single_data[:, cfg.NUM_CONTROL_FEATURES :]
         input_time_list = []
         spec_list = []
         gt_list = []
@@ -64,29 +61,28 @@ def load_data(look_back=20):
     # print(data["spec"].shape)
     # print(data["gt"].shape)
 
-    data["feature_name"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(data_path, csv_files[0]), skiprows=0).columns.values))
-    data["feature_unit"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(data_path, csv_files[0]), skiprows=1).columns.values))
-    for i in [9, 7, 6]:  # Chiller
-        del data["feature_name"][i]  # Chiller
-        del data["feature_unit"][i]  # Chiller
+    data["feature_name"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(cfg.DATA_PATH, csv_files[0]), skiprows=0).columns.values))
+    data["feature_unit"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(cfg.DATA_PATH, csv_files[0]), skiprows=1).columns.values))
+    # for i in [9, 7, 6]:  # Delete Chiller for step1
+    #     del data["feature_name"][i]  # Chiller
+    #     del data["feature_unit"][i]  # Chiller
     print("----------------------------------------------")
     return data
 
 
 # Calculate mean & std for scaling from train data
-def find_meanstd(train_index_list):
-    data_path = "../dataset/"
-    csv_files = os.listdir(data_path)
+def find_meanstd(cfg, train_index_list):
+    csv_files = os.listdir(cfg.DATA_PATH)
     csv_files.sort()
     train_csv_files = []
     for index in train_index_list:
         train_csv_files.append(csv_files[index])
     input_data = []
     for file in train_csv_files:
-        single_data = pd.read_csv(os.path.join(data_path, file), skiprows=1).values
+        single_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
         input_data.append(decimate(single_data)[:, 1:])
     input_array = np.array(input_data)
-    input_array = np.delete(input_array, [8, 6, 5], axis=2)  # Chiller
+    # input_array = np.delete(input_array, [8, 6, 5], axis=2)  # Delete Chiller for step1
     mean_list = []
     std_list = []
     for i in range(input_array.shape[2]):
@@ -114,8 +110,8 @@ class MazdaDataset(Dataset):
 
 
 # データセットを作成する関数
-def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[]):
-    num_control_features = 6  # Chiller
+def create_dataset(cfg, original_data, index_list, is_train, mean_list=[], std_list=[]):
+    num_control_features = cfg.NUM_CONTROL_FEATURES
     data = {}
     input_data_list = []
     spec_data_list = []
@@ -129,7 +125,7 @@ def create_dataset(original_data, index_list, is_train, mean_list=[], std_list=[
     spec_array = np.array(spec_data_list)
     gt_array = np.array(gt_data_list)
 
-    mean_list, std_list = find_meanstd(index_list) if is_train else (mean_list, std_list)
+    mean_list, std_list = find_meanstd(cfg, index_list) if is_train else (mean_list, std_list)
     print("\n\nTrain Dataset Normalization") if is_train else print("\n\nValidation Dataset Normalization")
     print("----------------------------------------------")
 

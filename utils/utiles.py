@@ -4,9 +4,16 @@ import numpy as np
 import random, os
 
 
-num_fixed_data = 8
-num_control_features = 6
-num_all_features = 36
+class CFG:
+    NUM_FIXED_DATA = 8
+    NUM_CONTROL_FEATURES = 9
+    NUM_PRED_FEATURES = 41
+    NUM_BYPRODUCT_FEATURES = 37
+    NUM_TARGET_FEATURES = 4
+    NUM_ALL_FEATURES = 50
+    RESULT_PATH = os.path.join("..", "result")
+    DATA_PATH = os.path.join("..", "teacher")
+
 
 predict_time_list = []
 
@@ -44,13 +51,13 @@ def seed_everything(seed=42):
     torch.backends.cudnn.deterministic = True
 
 
-# model Decide function from model name
-def modelDecision(args):
+# model decide from model name
+def modelDecision(args, cfg):
     if "LSTM" in args.model:
         if args.model == "LSTM":
             from model.lstm.lstm import LSTMClassifier
 
-        return LSTMClassifier(args.look_back, args.depth, args.dim, args.dropout)
+        return LSTMClassifier(cfg, args.look_back, args.depth, args.dim, args.dropout)
 
     if "BaseTransformer" in args.model:
         if args.model == "BaseTransformer":
@@ -66,15 +73,23 @@ def modelDecision(args):
         elif args.model == "BaseTransformer_flattened_AgentAwareAttention":
             from model.transformer.base_transformer_flattened_AgentAwareAttention import BaseTransformer
 
-        return BaseTransformer(args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
+        return BaseTransformer(cfg, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
 
     return None
 
 
+# case name decide from test index for step1 test folder
 def CaseNameDecision(test_index):
-    if test_index not in np.arange(num_fixed_data):
-        case_name = f"case{str(test_index-num_fixed_data+1).zfill(4)}"
+    if test_index not in np.arange(CFG.NUM_FIXED_DATA):
+        case_name = f"case{str(test_index-CFG.NUM_FIXED_DATA+1).zfill(4)}"
     else:
         case_name = list(fixed_case_list)[test_index]
 
     return case_name
+
+
+# enable the dropout layers during test-time
+def enable_dropout(model):
+    for m in model.modules():
+        if m.__class__.__name__.startswith("Dropout"):
+            m.train()

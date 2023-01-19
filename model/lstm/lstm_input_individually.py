@@ -11,11 +11,11 @@ def clones(module, n):
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, look_back, num_layers=2, num_hidden_units=256, dropout=0.2):
+    def __init__(self, cfg, look_back, num_layers=2, num_hidden_units=256, dropout=0.2):
         super(LSTMClassifier, self).__init__()
-        self.input_dim = 36
-        self.spec_dim = 6
-        self.output_dim = 30
+        self.input_dim = cfg.NUM_ALL_FEATURES
+        self.spec_dim = cfg.NUM_CONTROL_FEATURES
+        self.output_dim = cfg.NUM_PRED_FEATURES
         self.num_hidden_units = num_hidden_units
         self.lstm_list = clones(
             nn.LSTM(

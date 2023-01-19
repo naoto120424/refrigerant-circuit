@@ -230,14 +230,14 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, cfg, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
         super().__init__()
 
-        self.num_all_features = 36
-        self.num_control_features = 6
-        self.num_pred_features = 30
-        self.num_byproduct_features = 27
-        self.num_target_features = 3
+        self.num_control_features = cfg.NUM_CONTROL_FEATURES
+        self.num_pred_features = cfg.NUM_PRED_FEATURES
+        self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
+        self.num_target_features = cfg.NUM_TARGET_FEATURES
+        self.num_all_features = cfg.NUM_ALL_FEATURES
         self.num_agent = 3
         self.look_back = look_back
 

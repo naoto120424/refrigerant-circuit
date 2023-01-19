@@ -3,13 +3,13 @@ import torch.nn as nn
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, look_back, num_layers=2, num_hidden_units=256, dropout=0.2):
+    def __init__(self, cfg, look_back, num_layers=2, num_hidden_units=256, dropout=0.2):
         super(LSTMClassifier, self).__init__()
-        self.num_all_features = 36
-        self.num_control_features = 6
-        self.num_pred_features = 30
-        self.num_byproduct_features = 27
-        self.num_target_features = 3
+        self.num_control_features = cfg.NUM_CONTROL_FEATURES
+        self.num_pred_features = cfg.NUM_PRED_FEATURES
+        self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
+        self.num_target_features = cfg.NUM_TARGET_FEATURES
+        self.num_all_features = cfg.NUM_ALL_FEATURES
         self.look_back = look_back
 
         self.lstm_control = nn.LSTM(

@@ -4,28 +4,32 @@ import os, mlflow
 
 from sklearn.metrics import mean_absolute_error
 
-target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"]
-target_kW_unit = ["kW", "kW", "kW", "MPa"]
+target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Chiller_kW", "Comp_OutP"]
+target_kW_unit = ["kW", "kW", "kW", "kW", "MPa"]
 evaluation_list = ["ade", "fde", "mde", "pde"]
 
 score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Chiller_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
 
+""" for step1 test folder
 test_score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
+"""
 
 target_kW_visualization = {
     "ACDS_kW": {"pred": [], "gt": []},
     "Comp_kW": {"pred": [], "gt": []},
     "Eva_kW": {"pred": [], "gt": []},
+    "Chiller_kW": {"pred": [], "gt": []},
     "Comp_OutP": {"pred": [], "gt": []},
 }
 
@@ -37,13 +41,20 @@ target_kW_visualization = {
 """
 
 # Calculate Evaluation
-def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_data=8):
+def evaluation(gt_array, pred_array, output_feature_name, case_name):
     for i in range(len(output_feature_name)):
         if output_feature_name[i] in target_kW:
             ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
             fde = abs(gt_array[-1][i] - pred_array[-1][i])
             mde = max(abs(np.array(gt_array)[:, i] - np.array(pred_array)[:, i]))
             pde = abs(max(abs(np.array(gt_array)[:, i])) - max(abs(np.array(pred_array)[:, i])))
+
+            score_list_dict[output_feature_name[i]]["ade"].append(ade)
+            score_list_dict[output_feature_name[i]]["fde"].append(fde)
+            score_list_dict[output_feature_name[i]]["mde"].append(mde)
+            score_list_dict[output_feature_name[i]]["pde"].append(pde)
+
+            """ for step1 test folder
             if test_index not in np.arange(0, num_fixed_data):
                 score_list_dict[output_feature_name[i]]["ade"].append(ade)
                 score_list_dict[output_feature_name[i]]["fde"].append(fde)
@@ -54,6 +65,17 @@ def evaluation(test_index, gt_array, pred_array, output_feature_name, num_fixed_
                 test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
                 test_score_list_dict[output_feature_name[i]]["mde"].append(mde)
                 test_score_list_dict[output_feature_name[i]]["pde"].append(pde)
+            """
+
+            case_evaluation_path = os.path.join("..", "result", "img", "original_scale", case_name)
+            os.makedirs(case_evaluation_path, exist_ok=True)
+
+            f = open(os.path.join(case_evaluation_path, f"{output_feature_name[i]}_evaluation.txt"), "w")
+            f.write(f"ade: {ade}\n")
+            f.write(f"fde: {fde}\n")
+            f.write(f"mde: {mde}\n")
+            f.write(f"pde: {pde}\n")
+            f.close()
 
 
 # Save Evaluation
@@ -61,9 +83,7 @@ def save_evaluation(result_path):
     for target in target_kW:
         for evaluation in evaluation_list:
             np_array = np.array(score_list_dict[target][evaluation])
-            np_array_test = np.array(test_score_list_dict[target][evaluation])
             mlflow.log_metric(f"{target}_{evaluation.upper()}_mean", np.mean(np_array))
-            mlflow.log_metric(f"test_{target}_{evaluation.upper()}_mean", np.mean(np_array_test))
 
             evaluation_path = os.path.join(result_path, "evaluation")
             os.makedirs(evaluation_path, exist_ok=True)
@@ -75,12 +95,16 @@ def save_evaluation(result_path):
             f.write(f"median: {np.median(np_array)}\n")
             f.close()
 
+            """ for step1 test folder
+            np_array_test = np.array(test_score_list_dict[target][evaluation])
+            mlflow.log_metric(f"test_{target}_{evaluation.upper()}_mean", np.mean(np_array_test))
             f = open(os.path.join(evaluation_path, f"test_{target}_{evaluation.upper()}.txt"), "w")
             f.write(f"max: {np.max(np_array_test)}\n")
             f.write(f"min: {np.min(np_array_test)}\n")
             f.write(f"mean: {np.mean(np_array_test)}\n")
             f.write(f"median: {np.median(np_array_test)}\n")
             f.close()
+            """
 
 
 # Make Graph
@@ -104,7 +128,7 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
             target_kW_visualization[output_feature_name[i]]["gt"] = np.array(gt_array)[:, i]
 
     # For PowerPoint Slide
-    grf_row = 4
+    grf_row = 5
     grf_col = 1
     fig = plt.figure(figsize=(grf_col * 8, grf_row * 4))
     ax_list = []
