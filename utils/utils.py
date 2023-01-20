@@ -5,7 +5,6 @@ import random, os
 
 
 class CFG:
-    NUM_FIXED_DATA = 8
     NUM_CONTROL_FEATURES = 9
     NUM_PRED_FEATURES = 41
     NUM_BYPRODUCT_FEATURES = 37
@@ -14,8 +13,6 @@ class CFG:
     RESULT_PATH = os.path.join("..", "result")
     DATA_PATH = os.path.join("..", "teacher")
 
-
-predict_time_list = []
 
 model_list = {
     "LSTM",
@@ -28,6 +25,8 @@ model_list = {
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
+
+predict_time_list = []
 
 
 # seed
