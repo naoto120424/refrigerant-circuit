@@ -4,23 +4,30 @@ import os, mlflow
 
 from sklearn.metrics import mean_absolute_error
 
-target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Chiller_kW", "Comp_OutP"]
-target_kW_unit = ["kW", "kW", "kW", "kW", "MPa"]
+target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Comp_OutP"]
+target_kW_unit = ["kW", "kW", "kW", "MPa"]
 evaluation_list = ["ade", "fde", "mde", "pde"]
 
 score_list_dict = {
     "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
-    "Chiller_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
+
+
+test_score_list_dict = {
+    "ACDS_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
+}
+
 
 target_kW_visualization = {
     "ACDS_kW": {"pred": [], "gt": []},
     "Comp_kW": {"pred": [], "gt": []},
     "Eva_kW": {"pred": [], "gt": []},
-    "Chiller_kW": {"pred": [], "gt": []},
     "Comp_OutP": {"pred": [], "gt": []},
 }
 
@@ -32,7 +39,7 @@ target_kW_visualization = {
 """
 
 # Calculate Evaluation
-def evaluation(gt_array, pred_array, output_feature_name, case_name):
+def evaluation(gt_array, pred_array, output_feature_name, case_name, test_index, num_fixed_data):
     for i in range(len(output_feature_name)):
         if output_feature_name[i] in target_kW:
             ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
@@ -45,10 +52,21 @@ def evaluation(gt_array, pred_array, output_feature_name, case_name):
             score_list_dict[output_feature_name[i]]["mde"].append(mde)
             score_list_dict[output_feature_name[i]]["pde"].append(pde)
 
+            if test_index not in np.arange(0, num_fixed_data):
+                score_list_dict[output_feature_name[i]]["ade"].append(ade)
+                score_list_dict[output_feature_name[i]]["fde"].append(fde)
+                score_list_dict[output_feature_name[i]]["mde"].append(mde)
+                score_list_dict[output_feature_name[i]]["pde"].append(pde)
+            else:
+                test_score_list_dict[output_feature_name[i]]["ade"].append(ade)
+                test_score_list_dict[output_feature_name[i]]["fde"].append(fde)
+                test_score_list_dict[output_feature_name[i]]["mde"].append(mde)
+                test_score_list_dict[output_feature_name[i]]["pde"].append(pde)
+
             case_evaluation_path = os.path.join("..", "result", "img", "original_scale", case_name)
             os.makedirs(case_evaluation_path, exist_ok=True)
 
-            f = open(os.path.join(case_evaluation_path, f"evaluation_{output_feature_name[i]}.txt"), "w")
+            f = open(os.path.join(case_evaluation_path, f"{output_feature_name[i]}_evaluation.txt"), "w")
             f.write(f"ade: {ade}\n")
             f.write(f"fde: {fde}\n")
             f.write(f"mde: {mde}\n")
@@ -66,12 +84,20 @@ def save_evaluation(result_path):
             evaluation_path = os.path.join(result_path, "evaluation")
             os.makedirs(evaluation_path, exist_ok=True)
 
-            f = open(os.path.join(evaluation_path, f"{target}_{evaluation.upper()}.txt"), "w")
+            f = open(os.path.join(evaluation_path, f"{evaluation.upper()}_{target}.txt"), "w")
             f.write(f"max: {np.max(np_array)}\n")
             f.write(f"min: {np.min(np_array)}\n")
             f.write(f"mean: {np.mean(np_array)}\n")
             f.write(f"median: {np.median(np_array)}\n")
             f.close()
+
+            np_array_test = np.array(test_score_list_dict[target][evaluation])
+            mlflow.log_metric(f"test_{target}_{evaluation.upper()}_mean", np.mean(np_array_test))
+            f = open(os.path.join(evaluation_path, f"test_{target}_{evaluation.upper()}.txt"), "w")
+            f.write(f"max: {np.max(np_array_test)}\n")
+            f.write(f"min: {np.min(np_array_test)}\n")
+            f.write(f"mean: {np.mean(np_array_test)}\n")
+            f.write(f"median: {np.median(np_array_test)}\n")
 
 
 # Make Graph
