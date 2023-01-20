@@ -17,17 +17,6 @@ class CFG:
 
 predict_time_list = []
 
-fixed_case_list = {
-    "fixed_case0001_Comp_rpm_Swing_test_VF_Fix",
-    "fixed_case0002_Comp_rpm_Swing_test_VF_Fix",
-    "fixed_case0003_Comp_rpm_Swing_test_VF_Fix",
-    "fixed_case0004_Comp_rpm_Swing_test_VF_Fix",
-    "fixed_case0001_EXV_Swing_test_VF_Fix",
-    "fixed_case0002_EXV_Swing_test_VF_Fix",
-    "fixed_case0003_EXV_Swing_test_VF_Fix",
-    "fixed_case0004_EXV_Swing_test_VF_Fix",
-}
-
 model_list = {
     "LSTM",
     "BaseTransformer",
@@ -76,20 +65,3 @@ def modelDecision(args, cfg):
         return BaseTransformer(cfg, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
 
     return None
-
-
-# case name decide from test index for step1 test folder
-def CaseNameDecision(test_index):
-    if test_index not in np.arange(CFG.NUM_FIXED_DATA):
-        case_name = f"case{str(test_index-CFG.NUM_FIXED_DATA+1).zfill(4)}"
-    else:
-        case_name = list(fixed_case_list)[test_index]
-
-    return case_name
-
-
-# enable the dropout layers during test-time
-def enable_dropout(model):
-    for m in model.modules():
-        if m.__class__.__name__.startswith("Dropout"):
-            m.train()

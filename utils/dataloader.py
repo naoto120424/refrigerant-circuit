@@ -41,7 +41,6 @@ def load_data(cfg, look_back=20):
         csv_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
         single_data = decimate(csv_data)[:, 1:]
         # single_data = csv_data[:, 1:] # No decimate function
-        # single_data = np.delete(single_data, [8, 6, 5], axis=1)  # Delete Chiller for step1
         spec_data = single_data[:, : cfg.NUM_CONTROL_FEATURES]
         output_data = single_data[:, cfg.NUM_CONTROL_FEATURES :]
         input_time_list = []
@@ -63,9 +62,7 @@ def load_data(cfg, look_back=20):
 
     data["feature_name"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(cfg.DATA_PATH, csv_files[0]), skiprows=0).columns.values))
     data["feature_unit"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(cfg.DATA_PATH, csv_files[0]), skiprows=1).columns.values))
-    # for i in [9, 7, 6]:  # Delete Chiller for step1
-    #     del data["feature_name"][i]  # Chiller
-    #     del data["feature_unit"][i]  # Chiller
+
     print("----------------------------------------------")
     return data
 
@@ -82,7 +79,6 @@ def find_meanstd(cfg, train_index_list):
         single_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
         input_data.append(decimate(single_data)[:, 1:])
     input_array = np.array(input_data)
-    # input_array = np.delete(input_array, [8, 6, 5], axis=2)  # Delete Chiller for step1
     mean_list = []
     std_list = []
     for i in range(input_array.shape[2]):

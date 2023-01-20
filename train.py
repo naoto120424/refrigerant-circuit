@@ -4,7 +4,7 @@ import numpy as np
 import time, datetime
 import mlflow, shutil, argparse
 
-from utils.utiles import *
+from utils.utils import *
 from utils.dataloader import *
 from utils.visualization import *
 from utils.earlystopping import EarlyStopping
@@ -66,7 +66,6 @@ def main():
     else:
         train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
-    # test_index_list = np.append(test_index_list, np.arange(CFG.NUM_FIXED_DATA))
 
     train_dataset, mean_list, std_list = create_dataset(CFG, data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(CFG, data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
