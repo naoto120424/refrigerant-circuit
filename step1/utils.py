@@ -61,17 +61,17 @@ def modelDecision(args, cfg):
 
     if "BaseTransformer" in args.model:
         if args.model == "BaseTransformer":
-            from model.transformer.base_transformer import BaseTransformer
+            from model.BaseTransformer.base_transformer import BaseTransformer
         elif args.model == "BaseTransformer_sensor_first":
-            from model.transformer.base_transformer_sensor_first import BaseTransformer
+            from model.BaseTransformer.base_transformer_sensor_first import BaseTransformer
         elif args.model == "BaseTransformer_3types_aete":
-            from model.transformer.base_transformer_3types_aete import BaseTransformer
+            from model.BaseTransformer.base_transformer_3types_aete import BaseTransformer
         elif args.model == "BaseTransformer_3types_AgentAwareAttention":
-            from model.transformer.base_transformer_3types_AgentAwareAttention import BaseTransformer
+            from model.BaseTransformer.base_transformer_3types_AgentAwareAttention import BaseTransformer
         elif args.model == "BaseTransformer_flattened_aete":
-            from model.transformer.base_transformer_flattened_aete import BaseTransformer
+            from model.BaseTransformer.base_transformer_flattened_aete import BaseTransformer
         elif args.model == "BaseTransformer_flattened_AgentAwareAttention":
-            from model.transformer.base_transformer_flattened_AgentAwareAttention import BaseTransformer
+            from model.BaseTransformer.base_transformer_flattened_AgentAwareAttention import BaseTransformer
 
         return BaseTransformer(cfg, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
 
