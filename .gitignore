@@ -18,5 +18,5 @@
 /temporal_fusion_transformer_pytorch/
 /model/__pycache__/
 /model/lstm/__pycache__/
-/model/transformer/__pycache__/
+/model/BaseTransformer/__pycache__/
 /utils/__pycache__/
