@@ -28,7 +28,7 @@ target_kW_visualization = {
     ade: average displacement error (Average of all time errors)
     fde: final displacement error (Error of the last time)
     mde: max displacement error (Maximum error of all times)
-    pde: peek displacement error (Error of peak value)
+    pde: peak displacement error (Error of peak value)
 """
 
 # Calculate Evaluation
