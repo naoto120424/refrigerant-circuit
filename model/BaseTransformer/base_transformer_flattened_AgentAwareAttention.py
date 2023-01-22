@@ -99,7 +99,7 @@ class InputEmbedding(nn.Module):
         """
         img_path = os.path.join("img", "inp_flattened", "encoding")
         os.makedirs(img_path, exist_ok=True)
-        # positional encoding visualization
+        # time encoding visualization
         te = self.time_encoding(input_emb_all).to("cpu").detach().numpy().copy()
         print("te", te.shape)
         fig = plt.figure()
@@ -233,7 +233,7 @@ class BaseTransformer(nn.Module):
         self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
         self.num_target_features = cfg.NUM_TARGET_FEATURES
         self.num_all_features = cfg.NUM_ALL_FEATURES
-        self.num_agent = 36
+        self.num_agent = self.num_all_features
         self.look_back = look_back
 
         self.input_embedding = InputEmbedding(self.look_back, self.num_all_features, self.num_control_features, dim)
