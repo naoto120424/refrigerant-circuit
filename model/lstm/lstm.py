@@ -3,24 +3,27 @@ import torch.nn as nn
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, cfg, look_back, num_layers=2, num_hidden_units=256, dropout=0.2):
+    def __init__(self, cfg, args):
         super(LSTMClassifier, self).__init__()
         self.input_dim = cfg.NUM_ALL_FEATURES
         self.spec_dim = cfg.NUM_CONTROL_FEATURES
         self.output_dim = cfg.NUM_PRED_FEATURES
-        self.num_hidden_units = num_hidden_units
+        self.num_hidden_units = args.dim
+        self.num_layers = args.depth
+        self.dropout = args.dropout
+
         self.lstm = nn.LSTM(
             input_size=self.input_dim,
-            hidden_size=num_hidden_units,
-            num_layers=num_layers,
-            dropout=dropout,
+            hidden_size=self.num_hidden_units,
+            num_layers=self.num_layers,
+            dropout=self.dropout,
             batch_first=True,
         )
-        self.spec_dense = nn.Linear(self.spec_dim, num_hidden_units)
+        self.spec_dense = nn.Linear(self.spec_dim, self.num_hidden_units)
         self.predictor = nn.Sequential(
-            nn.Linear(num_hidden_units * 2, num_hidden_units),
+            nn.Linear(self.num_hidden_units * 2, self.num_hidden_units),
             nn.ReLU(inplace=True),
-            nn.Linear(num_hidden_units, self.output_dim),
+            nn.Linear(self.num_hidden_units, self.output_dim),
         )
 
     def forward(self, x, spec, h=None):
