@@ -71,19 +71,19 @@ class TimeEncoding(nn.Module):
 
 
 class InputEmbedding(nn.Module):
-    def __init__(self, look_back, num_control_features, num_byproduct_features, num_target_features, dim):
+    def __init__(self, cfg, args):
         super(InputEmbedding, self).__init__()
-        self.look_back = look_back
-        self.num_control_features = num_control_features
-        self.num_byproduct_features = num_byproduct_features
-        self.num_target_features = num_target_features
+        self.look_back = args.look_back
+        self.num_control_features = cfg.NUM_CONTROL_FEATURES
+        self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
+        self.num_target_features = cfg.NUM_TARGET_FEATURES
 
-        self.control_embedding = nn.Linear(num_control_features, dim)
-        self.byproduct_embedding = nn.Linear(num_byproduct_features, dim)
-        self.target_embedding = nn.Linear(num_target_features, dim)
+        self.control_embedding = nn.Linear(self.num_control_features, args.dim)
+        self.byproduct_embedding = nn.Linear(self.num_byproduct_features, args.dim)
+        self.target_embedding = nn.Linear(self.num_target_features, args.dim)
 
-        self.agent_encoding = AgentEncoding(dim, self.look_back)
-        self.time_encoding = TimeEncoding(dim, self.look_back)
+        self.agent_encoding = AgentEncoding(args.dim, self.look_back)
+        self.time_encoding = TimeEncoding(args.dim, self.look_back)
 
     def forward(self, x):
         control = self.control_embedding(x[:, :, : self.num_control_features])
@@ -122,6 +122,24 @@ class InputEmbedding(nn.Module):
         return x
 
 
+class SpecEmbedding(nn.Module):
+    def __init__(self, dim, num_control_features):
+        super().__init__()
+        self.spec_emb_list = clones(nn.Linear(1, dim), num_control_features)
+
+    def forward(self, spec):
+        spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
+        spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
+
+        for i, spec_embedding in enumerate(self.spec_emb_list):
+            if i == 0:
+                spec_emb_all = spec_embedding(spec[:, :, :, i])
+            else:
+                spec_emb_all = torch.cat((spec_emb_all, spec_embedding(spec[:, :, :, i])), dim=1)
+
+        return spec_emb_all
+
+
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
         super().__init__()
@@ -148,22 +166,22 @@ class FeedForward(nn.Module):
 
 
 class AgentAwareAttention(nn.Module):
-    def __init__(self, dim, num_agent=200, look_back=20, num_control_features=9, heads=20, dim_head=1600, dropout=0.1):
+    def __init__(self, args, num_agent=200, num_control_features=9):
         super().__init__()
         self.num_agent = num_agent
         self.num_control_features = num_control_features
-        self.look_back = look_back
-        inner_dim = dim_head * heads
-        project_out = not (heads == 1 and dim_head == dim)
+        self.look_back = args.look_back
+        inner_dim = args.dim_head * args.heads
+        project_out = not (args.heads == 1 and args.dim_head == args.dim)
 
-        self.heads = heads
-        self.scale = dim_head**-0.5
+        self.heads = args.heads
+        self.scale = args.dim_head**-0.5
 
         self.attend = nn.Softmax(dim=-1)
-        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
-        self.to_qk_self = nn.Linear(dim, inner_dim * 2, bias=False)
+        self.to_qkv = nn.Linear(args.dim, inner_dim * 3, bias=False)
+        self.to_qk_self = nn.Linear(args.dim, inner_dim * 2, bias=False)
 
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
+        self.to_out = nn.Sequential(nn.Linear(inner_dim, args.dim), nn.Dropout(args.dropout)) if project_out else nn.Identity()
 
         attn_mask = torch.eye(self.num_agent)
         attn_mask = attn_mask.repeat_interleave(self.look_back, dim=1)
@@ -205,15 +223,15 @@ class AgentAwareAttention(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, dim, num_agent, look_back, num_control_features, depth, heads, dim_head, fc_dim, dropout=0.1):
+    def __init__(self, args, num_agent, num_control_features):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for _ in range(depth):
+        for _ in range(args.depth):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(dim, AgentAwareAttention(dim, num_agent, look_back, num_control_features, heads=heads, dim_head=dim_head, dropout=dropout)),
-                        PreNorm(dim, FeedForward(dim, fc_dim, dropout=dropout)),
+                        PreNorm(args.dim, AgentAwareAttention(args, num_agent, num_control_features)),
+                        PreNorm(args.dim, FeedForward(args.dim, args.fc_dim, dropout=args.dropout)),
                     ]
                 )
             )
@@ -230,7 +248,7 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, cfg, look_back=20, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, cfg, args):
         super().__init__()
 
         self.num_control_features = cfg.NUM_CONTROL_FEATURES
@@ -239,32 +257,22 @@ class BaseTransformer(nn.Module):
         self.num_target_features = cfg.NUM_TARGET_FEATURES
         self.num_all_features = cfg.NUM_ALL_FEATURES
         self.num_agent = 3
-        self.look_back = look_back
 
-        self.input_embedding = InputEmbedding(self.look_back, self.num_control_features, self.num_byproduct_features, self.num_target_features, dim)
+        self.input_embedding = InputEmbedding(cfg, args)
+        self.spec_embedding = SpecEmbedding(args.dim, self.num_control_features)
 
-        self.dropout = nn.Dropout(emb_dropout)
+        self.dropout = nn.Dropout(args.emb_dropout)
 
-        self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
+        self.transformer = Transformer(args, self.num_agent, self.num_control_features)
 
-        self.transformer = Transformer(dim, self.num_agent, self.look_back, self.num_control_features, depth, heads, dim_head, fc_dim, dropout)
-
-        self.generator = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, self.num_pred_features))
+        self.generator = nn.Sequential(nn.LayerNorm(args.dim), nn.Linear(args.dim, self.num_pred_features))
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
 
-        spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
-        spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
+        spec = self.spec_embedding(spec)
 
-        for i, spec_embedding in enumerate(self.spec_emb_list):
-            if i == 0:
-                spec_emb_all = spec_embedding(spec[:, :, :, i])
-            else:
-                spec_emb = spec_embedding(spec[:, :, :, i])
-                spec_emb_all = torch.cat((spec_emb_all, spec_emb), dim=1)
-
-        x = torch.cat((x, spec_emb_all), dim=1)
+        x = torch.cat((x, spec), dim=1)
 
         x = self.dropout(x)
         x, attn = self.transformer(x)

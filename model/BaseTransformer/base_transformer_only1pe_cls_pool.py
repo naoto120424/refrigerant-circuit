@@ -114,7 +114,7 @@ class Transformer(nn.Module):
 
 
 class BaseTransformer(nn.Module):
-    def __init__(self, cfg, look_back, dim=512, depth=3, heads=8, fc_dim=2048, dim_head=64, dropout=0.1, emb_dropout=0.1):
+    def __init__(self, cfg, args):
         super().__init__()
 
         self.num_control_features = cfg.NUM_CONTROL_FEATURES
@@ -122,24 +122,24 @@ class BaseTransformer(nn.Module):
         self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
         self.num_target_features = cfg.NUM_TARGET_FEATURES
         self.num_all_features = cfg.NUM_ALL_FEATURES
-        self.look_back = look_back
+        self.look_back = args.look_back
 
-        self.input_embedding = nn.Linear(self.num_all_features, dim)
-        self.positional_embedding = PositionalEmbedding(dim)  # 絶対位置エンコーディング
+        self.input_embedding = nn.Linear(self.num_all_features, args.dim)
+        self.positional_embedding = PositionalEmbedding(args.dim)  # 絶対位置エンコーディング
 
         # self.pos_embedding = nn.Parameter(torch.randn(1, self.num_pred_features + self.look_back + self.num_control_features, dim))
-        self.pred_token = nn.Parameter(torch.randn(1, self.num_pred_features, dim))
-        self.dropout = nn.Dropout(emb_dropout)
+        self.pred_token = nn.Parameter(torch.randn(1, self.num_pred_features, args.dim))
+        self.dropout = nn.Dropout(args.emb_dropout)
 
-        self.spec_emb_list = clones(nn.Linear(1, dim), self.num_control_features)
+        self.spec_emb_list = clones(nn.Linear(1, args.dim), self.num_control_features)
 
-        self.transformer = Transformer(dim, depth, heads, dim_head, fc_dim, dropout)
+        self.transformer = Transformer(args.dim, args.depth, args.heads, args.dim_head, args.fc_dim, args.dropout)
 
         self.generator = nn.Sequential(
-            nn.Linear(self.num_pred_features * dim, dim),
+            nn.Linear(self.num_pred_features * args.dim, args.dim),
             nn.ReLU(inplace=True),
-            nn.LayerNorm(dim),
-            nn.Linear(dim, self.num_pred_features),
+            nn.LayerNorm(args.dim),
+            nn.Linear(args.dim, self.num_pred_features),
         )
 
     def forward(self, input, spec):
