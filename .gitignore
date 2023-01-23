@@ -10,13 +10,10 @@
 /data_plot_fixed/
 /data_plot_step2/
 /.vscode/
-/__pycache__/
 /sasaguchi/
 /AgentFormer/
 /tft_tf2/
 /Nakato/
 /temporal_fusion_transformer_pytorch/
-/model/__pycache__/
-/model/lstm/__pycache__/
-/model/BaseTransformer/__pycache__/
-/utils/__pycache__/
+
+__pycache__
