@@ -4,6 +4,8 @@
 /case0001.py
 /test.py
 /sasaguchi_train.py
+/LD2011_2014.txt
+/tft.ipynb
 /データセットに関する説明.txt
 
 /data_plot/
@@ -13,6 +15,8 @@
 /sasaguchi/
 /AgentFormer/
 /tft_tf2/
+/__MACOSX
+/lightning_logs/
 /Nakato/
 /temporal_fusion_transformer_pytorch/
 
