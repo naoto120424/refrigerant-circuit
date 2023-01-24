@@ -17,7 +17,6 @@ def main():
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bs", type=int, default=16)
-    parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -33,14 +32,13 @@ def main():
     parser.add_argument("--delta", type=float, default=1e-3)
     args = parser.parse_args()
 
-    """ mlflow """
+    """mlflow"""
     mlflow.set_tracking_uri("../mlflow_experiment")
     mlflow.set_experiment(args.e_name)
     mlflow.start_run()
     mlflow.log_param("seed", args.seed)
     mlflow.log_param("batch size", args.bs)
     mlflow.log_param("look back", args.look_back)
-    mlflow.log_param("epoch", args.epoch)
     mlflow.log_param("debug", args.debug)
     mlflow.log_param("model", args.model)
     mlflow.log_param("criterion", args.criterion)
@@ -55,7 +53,7 @@ def main():
         mlflow.log_param("fc_dim", args.fc_dim)
         mlflow.log_param("emb_dropout", args.emb_dropout)
 
-    """ Prepare """
+    """Prepare"""
     seed_everything(seed=args.seed)
     data = load_data(CFG, look_back=args.look_back)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -73,15 +71,15 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
 
-    model = modelDecision(args, CFG) if args.model in model_list else print(f"unknown model name")
-    criterion = criterion_list[args.criterion] if args.criterion in criterion_list else print(f"unknown criterion name")
+    model = modelDecision(args, CFG)
+    criterion = criterion_list[args.criterion]
 
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     early_stopping = EarlyStopping(patience=args.patience, delta=args.delta, verbose=True)
-    epoch_num = args.epoch if not args.debug else 3
+    epoch_num = CFG.MAX_EPOCH if not args.debug else 3
 
-    """ Train """
+    """Train"""
     print("\n\nTrain Start")
     print("----------------------------------------------")
     print(f"Device      : {str.upper(device)}")
@@ -111,6 +109,7 @@ def main():
             spec = batch["spec"].to(device)
             gt = batch["gt"].to(device)
 
+            # pred, _ = model(inp, spec, gt)  # Transformer
             pred, _ = model(inp, spec)  # train pred here
 
             loss = criterion(pred, gt)
@@ -130,6 +129,7 @@ def main():
                 spec = batch["spec"].to(device)
                 gt = batch["gt"].to(device)
 
+                # pred, _ = model(inp, spec, gt)  # Transformer
                 pred, _ = model(inp, spec)  # validation pred here
 
                 test_error = torch.mean(torch.abs(gt - pred))
@@ -153,7 +153,7 @@ def main():
     print("----------------------------------------------")
     print(f"Train Time: {train_time}")
 
-    """ Test """
+    """Test"""
     with torch.no_grad():
         print(f"\n\nTest Start. Case Num: {len(test_index_list)}")
         print("----------------------------------------------")
@@ -171,10 +171,13 @@ def main():
 
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
+            scaling_gt_data = gt_data.copy()
             for i in range(scaling_input_data.shape[1]):  # input scaling
                 scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i]) / std_list[i]
             for i in range(scaling_spec_data.shape[1]):  # spec scaling
                 scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
+            for i in range(scaling_gt_data.shape[1]):  # ground truth scaling
+                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
 
             attn_all = []
 
@@ -182,6 +185,7 @@ def main():
             for i in range(scaling_spec_data.shape[0]):
                 input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
+                gt = torch.from_numpy(scaling_gt_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
 
                 scaling_pred_data, attn = model(input, spec)  # test pred here
                 scaling_pred_data = scaling_pred_data.detach().to("cpu").numpy().copy()[0]
@@ -222,7 +226,7 @@ def main():
     mlflow.end_run()
     print("----------------------------------------------")
     print(f"Predict Time: {np.mean(predict_time_list)} [s]\n")
-    print("Experiment End\n")
+    print("Experiment End")
 
 
 if __name__ == "__main__":

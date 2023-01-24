@@ -10,6 +10,7 @@ class CFG:
     NUM_BYPRODUCT_FEATURES = 37
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
+    MAX_EPOCH = 5
     RESULT_PATH = os.path.join("..", "result")
     DATA_PATH = os.path.join("..", "teacher")
 
@@ -20,8 +21,9 @@ model_list = {
     "BaseTransformer_sensor_first",
     "BaseTransformer_3types_aete",
     "BaseTransformer_3types_AgentAwareAttention",
-    "BaseTransformer_flattened_aete",
-    "BaseTransformer_flattened_AgentAwareAttention",
+    "BaseTransformer_individually_aete",
+    "BaseTransformer_individually_AgentAwareAttention",
+    "Transformer",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -41,11 +43,14 @@ def seed_everything(seed=42):
 
 # model decide from model name
 def modelDecision(args, cfg):
+    # print(vars(cfg))
+    # print(args)
+
     if "LSTM" in args.model:
         if args.model == "LSTM":
             from model.lstm.lstm import LSTMClassifier
 
-        return LSTMClassifier(cfg, args.look_back, args.depth, args.dim, args.dropout)
+        return LSTMClassifier(cfg, args)
 
     if "BaseTransformer" in args.model:
         if args.model == "BaseTransformer":
@@ -56,11 +61,16 @@ def modelDecision(args, cfg):
             from model.BaseTransformer.base_transformer_3types_aete import BaseTransformer
         elif args.model == "BaseTransformer_3types_AgentAwareAttention":
             from model.BaseTransformer.base_transformer_3types_AgentAwareAttention import BaseTransformer
-        elif args.model == "BaseTransformer_flattened_aete":
-            from model.BaseTransformer.base_transformer_flattened_aete import BaseTransformer
-        elif args.model == "BaseTransformer_flattened_AgentAwareAttention":
-            from model.BaseTransformer.base_transformer_flattened_AgentAwareAttention import BaseTransformer
+        elif args.model == "BaseTransformer_individually_aete":
+            from model.BaseTransformer.base_transformer_individually_aete import BaseTransformer
+        elif args.model == "BaseTransformer_individually_AgentAwareAttention":
+            from model.BaseTransformer.base_transformer_individually_AgentAwareAttention import BaseTransformer
 
-        return BaseTransformer(cfg, args.look_back, args.dim, args.depth, args.heads, args.fc_dim, args.dim_head, args.dropout, args.emb_dropout)
+        return BaseTransformer(cfg, args)
 
+    if "Transformer" in args.model:
+        if args.model == "Transformer":
+            from model.Transformer.transformer import Transformer
+
+        return Transformer(cfg, args)
     return None
