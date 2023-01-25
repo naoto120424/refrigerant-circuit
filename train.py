@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
-import time, datetime
+import time, datetime, os
 import mlflow, shutil, argparse
 
 from utils.utils import *
@@ -68,8 +68,8 @@ def main():
     train_dataset, mean_list, std_list = create_dataset(CFG, data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(CFG, data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
+    val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
 
     model = modelDecision(args, CFG)
     criterion = criterion_list[args.criterion]

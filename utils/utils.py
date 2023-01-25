@@ -10,7 +10,7 @@ class CFG:
     NUM_BYPRODUCT_FEATURES = 37
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
-    MAX_EPOCH = 5
+    MAX_EPOCH = 300
     RESULT_PATH = os.path.join("..", "result")
     DATA_PATH = os.path.join("..", "teacher")
 
