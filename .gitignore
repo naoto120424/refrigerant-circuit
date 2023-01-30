@@ -5,10 +5,14 @@
 /test.py
 /sasaguchi_train.py
 /amp_train.py
+/step1_train.py
 /LD2011_2014.txt
 /tft.ipynb
+/tft_sample.ipynb
 /データセットに関する説明.txt
 
+/step1/
+/MCdropout/
 /data_plot/
 /data_plot_fixed/
 /data_plot_step2/
