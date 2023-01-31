@@ -11,8 +11,9 @@ class CFG:
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
     MAX_EPOCH = 300
-    RESULT_PATH = os.path.join("..", "result")
     DATA_PATH = os.path.join("..", "teacher")
+    RESULT_PATH = os.path.join("..", "result")
+    MLFLOW_PATH = os.path.join("..", "mlflow_experiment")
 
 
 model_list = {

@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--bs", type=int, default=16)
+    parser.add_argument("--bs", type=int, default=128)
     parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--dim", type=int, default=512)
     parser.add_argument("--depth", type=int, default=3)
@@ -33,7 +33,7 @@ def main():
     args = parser.parse_args()
 
     """mlflow"""
-    mlflow.set_tracking_uri("../mlflow_experiment")
+    mlflow.set_tracking_uri(CFG.MLFLOW_PATH)
     mlflow.set_experiment(args.e_name)
     mlflow.start_run()
     mlflow.log_param("seed", args.seed)
