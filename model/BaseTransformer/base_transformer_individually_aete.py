@@ -97,13 +97,15 @@ class InputEmbedding(nn.Module):
         # print('input emb all', input_emb_all.shape)
 
         """
+        img_path = os.path.join("img", "inp_individually", "encoding")
+        os.makedirs(img_path, exist_ok=True)
         # positional encoding visualization
         te = self.time_encoding(input_emb_all).to("cpu").detach().numpy().copy()
         print("te", te.shape)
         fig = plt.figure()
         plt.imshow(te[0])
         plt.colorbar()
-        plt.savefig("img/time_encoding_input_flattened.png")
+        plt.savefig("img/inp_individually/encoding/time_encoding_input_individually.png")
 
         # agent encoding visualization
         ae = self.agent_encoding(input_emb_all).to("cpu").detach().numpy().copy()
@@ -111,7 +113,7 @@ class InputEmbedding(nn.Module):
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("img/agent_encoding_input_flattened.png")
+        plt.savefig("img/inp_individually/encoding/agent_encoding_input_individually.png")
         """
 
         return input_emb_all

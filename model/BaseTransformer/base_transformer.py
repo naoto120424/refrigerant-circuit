@@ -36,6 +36,13 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
+        img_path = os.path.join("img", "inp_normal", "encoding")
+        os.makedirs(img_path, exist_ok=True)
+        pe = self.pe[:, : x.size(1)].to("cpu").detach().numpy().copy()
+        fig = plt.figure()
+        plt.imshow(pe[0])
+        plt.colorbar()
+        plt.savefig(f"img/inp_normal/encoding/time_encoding_input_norm_lookback{x.size(1)}.png")
         return self.pe[:, : x.size(1)]
 
 

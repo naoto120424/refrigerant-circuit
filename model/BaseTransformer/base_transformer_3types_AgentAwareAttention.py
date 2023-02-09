@@ -109,14 +109,14 @@ class InputEmbedding(nn.Module):
         fig = plt.figure()
         plt.imshow(te[0])
         plt.colorbar()
-        plt.savefig("img/inp_3types/encoding/time_encoding_input_3types.png")
+        plt.savefig(f"img/inp_3types/encoding/time_encoding_input_3types_lookback{self.look_back}.png")
         # agent encoding visualization
         ae = self.agent_encoding(x).to("cpu").detach().numpy().copy()
         print("ae", ae.shape)
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
-        plt.savefig("img/inp_3types/encoding/agent_encoding_input_3types.png")
+        plt.savefig(f"img/inp_3types/encoding/agent_encoding_input_3types_lookback{self.look_back}.png")
         """
 
         return x
@@ -197,7 +197,6 @@ class AgentAwareAttention(nn.Module):
         plt.imshow(attn_mask, cmap="Blues")
         plt.colorbar()
         plt.savefig(f"img/inp_3types/attention/attention_mask_input_3types_lookback{self.look_back}.png")
-        print("save fig")
         """
 
     def forward(self, x):
