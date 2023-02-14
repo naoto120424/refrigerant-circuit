@@ -58,12 +58,8 @@ def main():
     data = load_data(CFG, look_back=args.look_back)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    if not args.debug:
-        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=200)
-        train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
-    else:
-        train_index_list, test_index_list = train_test_split(np.arange(100), test_size=10)
-        train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
+    train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=200)
+    train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
 
     train_dataset, mean_list, std_list = create_dataset(CFG, data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(CFG, data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
@@ -182,6 +178,7 @@ def main():
             attn_all = []
 
             start_time = time.perf_counter()
+
             for i in range(scaling_spec_data.shape[0]):
                 input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
@@ -195,6 +192,7 @@ def main():
                 if "BaseTransformer" in args.model:
                     attn = attn.detach().to("cpu").numpy().copy()
                     attn_all.append(attn)
+
             end_time = time.perf_counter()
             predict_time_list.append(end_time - start_time)
 
