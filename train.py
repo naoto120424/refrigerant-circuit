@@ -139,8 +139,8 @@ def main():
 
         os.makedirs(CFG.RESULT_PATH, exist_ok=True)
         early_stopping(epoch_test_error, model, epoch)
-        if early_stopping.early_stop:
-            break
+        # if early_stopping.early_stop:
+        #     break
 
     train_end_time = time.perf_counter()
     train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))
