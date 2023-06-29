@@ -31,6 +31,7 @@ target_kW_visualization = {
     pde: peak displacement error (Error of peak value)
 """
 
+
 # Calculate Evaluation
 def evaluation(gt_array, pred_array, output_feature_name, case_name):
     for i in range(len(output_feature_name)):
@@ -75,8 +76,14 @@ def save_evaluation(result_path):
 
 
 # Make Graph
-def visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, result_path, is_normalized=False):
-    img_path = os.path.join(result_path, "img", "normalized", case_name) if is_normalized else os.path.join(result_path, "img", "original_scale", case_name)
+def visualization(
+    gt_array, pred_array, output_feature_name, output_feature_unit, case_name, result_path, debug=False, is_normalized=False
+):
+    img_path = (
+        os.path.join(result_path, "img", "normalized", case_name)
+        if is_normalized
+        else os.path.join(result_path, "img", "original_scale", case_name)
+    )
     os.makedirs(img_path, exist_ok=True)
 
     for i in range(len(output_feature_name)):
@@ -84,10 +91,12 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
         ax = fig.add_subplot(1, 1, 1)
         ax.plot(np.array(gt_array)[:, i], color="#e46409", label="gt")
         ax.plot(np.array(pred_array)[:, i], color="b", label="pred")
-        ax.set_title(case_name)
-        ax.set_xlabel("Time[s]")
-        ax.set_ylabel(f"{output_feature_name[i]}[{output_feature_unit[i]}]")
-        ax.legend(loc="best")
+        ax.set_title(case_name, fontsize=16)
+        ax.set_xlabel("Time[s]", fontsize=16)
+        ax.set_ylabel(f"{output_feature_name[i]}[{output_feature_unit[i]}]", fontsize=16)
+        ax.set_yticks([])
+        ax.set_xticks([0, 600, 1200])
+        ax.legend(loc="best", fontsize=16)
         plt.savefig(os.path.join(img_path, f"{output_feature_name[i]}.png"))
         plt.close()
         if output_feature_name[i] in target_kW:
@@ -103,8 +112,12 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
         for i in range(grf_col):
             if (j * grf_col + i) < len(target_kW):
                 ax_list.append(fig.add_subplot(grf_row, grf_col, j * grf_col + i + 1))
-                ax_list[j * grf_col + i].plot(target_kW_visualization[target_kW[j * grf_col + i]]["gt"], color="#e46409", label="gt")
-                ax_list[j * grf_col + i].plot(target_kW_visualization[target_kW[j * grf_col + i]]["pred"], color="b", label="pred")
+                ax_list[j * grf_col + i].plot(
+                    target_kW_visualization[target_kW[j * grf_col + i]]["gt"], color="#e46409", label="gt"
+                )
+                ax_list[j * grf_col + i].plot(
+                    target_kW_visualization[target_kW[j * grf_col + i]]["pred"], color="b", label="pred"
+                )
                 ax_list[j * grf_col + i].set_xlabel(f"Time[s]")
                 ax_list[j * grf_col + i].set_ylabel(f"{target_kW[j * grf_col + i]}[{target_kW_unit[j * grf_col + i]}]")
                 ax_list[j * grf_col + i].legend(loc="best")

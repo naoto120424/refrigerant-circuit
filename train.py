@@ -75,6 +75,8 @@ def main():
     early_stopping = EarlyStopping(patience=args.patience, delta=args.delta, verbose=True)
     epoch_num = CFG.MAX_EPOCH if not args.debug else 3
 
+    # model = torch.compile(model)  # For PyTorch2.0
+
     """Train"""
     print("\n\nTrain Start")
     print("----------------------------------------------")
@@ -173,14 +175,21 @@ def main():
             for i in range(scaling_spec_data.shape[1]):  # spec scaling
                 scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
             for i in range(scaling_gt_data.shape[1]):  # ground truth scaling
-                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
+                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[
+                    i + CFG.NUM_CONTROL_FEATURES
+                ]
 
             attn_all = []
 
             start_time = time.perf_counter()
 
             for i in range(scaling_spec_data.shape[0]):
-                input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
+                input = (
+                    torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32))
+                    .clone()
+                    .unsqueeze(0)
+                    .to(device)
+                )
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 gt = torch.from_numpy(scaling_gt_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
 
@@ -210,11 +219,24 @@ def main():
 
             scaling_gt_data = np.zeros(np.array(gt_output_data).shape)
             for i in range(np.array(gt_output_data).shape[1]):  # scaling ground truth data for visualization
-                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
+                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[
+                    i + CFG.NUM_CONTROL_FEATURES
+                ]
 
             evaluation(gt_output_data, pred_data, output_feature_name, case_name)
-            visualization(gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH)
-            visualization(scaling_gt_data, scaling_pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, is_normalized=True)
+            visualization(
+                gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug
+            )
+            visualization(
+                scaling_gt_data,
+                scaling_pred_data,
+                output_feature_name,
+                output_feature_unit,
+                case_name,
+                CFG.RESULT_PATH,
+                args.debug,
+                is_normalized=True,
+            )
             attention_visualization(args, attn_all, CFG.RESULT_PATH, case_name) if "BaseTransformer" in args.model else None
 
     save_evaluation(CFG.RESULT_PATH)

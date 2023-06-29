@@ -89,7 +89,9 @@ class InputEmbedding(nn.Module):
         control = self.control_embedding(x[:, :, : self.num_control_features])
         # control += self.positional_embedding(control)
         # print('control embedding: ', control.shape)
-        byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
+        byproduct = self.byproduct_embedding(
+            x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features]
+        )
         # byproduct += self.positional_embedding(byproduct)
         # print('byproduct embedding: ', byproduct.shape)
         target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
@@ -107,7 +109,10 @@ class InputEmbedding(nn.Module):
         te = self.time_encoding(x).to("cpu").detach().numpy().copy()
         print("te", te.shape)
         fig = plt.figure()
+        plt.rcParams["font.size"] = 18
+        plt.tight_layout()
         plt.imshow(te[0])
+        plt.yticks([])
         plt.colorbar()
         plt.savefig("img/inp_3types/encoding/time_encoding_input_3types.png")
         # agent encoding visualization
@@ -116,6 +121,8 @@ class InputEmbedding(nn.Module):
         fig = plt.figure()
         plt.imshow(ae[0])
         plt.colorbar()
+        plt.rcParams["font.size"] = 18
+        plt.tight_layout()
         plt.savefig("img/inp_3types/encoding/agent_encoding_input_3types.png")
         """
 

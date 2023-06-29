@@ -10,7 +10,7 @@ class CFG:
     NUM_BYPRODUCT_FEATURES = 37
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
-    MAX_EPOCH = 500
+    MAX_EPOCH = 100
     DATA_PATH = os.path.join("..", "teacher")
     RESULT_PATH = os.path.join("..", "result")
     MLFLOW_PATH = os.path.join("..", "mlflow_experiment")
@@ -40,6 +40,7 @@ def seed_everything(seed=42):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+    torch.set_float32_matmul_precision("high")
 
 
 # model decide from model name
