@@ -10,7 +10,7 @@ class CFG:
     NUM_BYPRODUCT_FEATURES = 37
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
-    MAX_EPOCH = 100
+    MAX_EPOCH = 20
     DATA_PATH = os.path.join("..", "teacher")
     RESULT_PATH = os.path.join("..", "result")
     MLFLOW_PATH = os.path.join("..", "mlflow_experiment")
@@ -75,4 +75,10 @@ def modelDecision(args, cfg):
             from model.Transformer.transformer import Transformer
 
         return Transformer(cfg, args)
+
+    if "Crossformer" in args.model:
+        if args.model == "Crossformer":
+            from model.crossformer.cross_former import Crossformer
+
+        return Crossformer(cfg, args)
     return None

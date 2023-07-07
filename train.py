@@ -14,52 +14,81 @@ from sklearn.model_selection import train_test_split
 def main():
     """parser"""
     parser = argparse.ArgumentParser(description="Mazda Refrigerant Circuit Project")
-    parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit Tutorial")
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--bs", type=int, default=128)
+
+    parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit", help="experiment name")
+    parser.add_argument("--model", type=str, default="BaseTransformer", help="model name")
+    parser.add_argument("--data_split", type=str, default="0.7,0.1,0.2", help="train/val/test split, can be ratio or number")
+    parser.add_argument("--debug", type=bool, default=False, help="debug")
+    parser.add_argument("--seed", type=int, default=42, help="seed")
+
+    parser.add_argument("--bs", type=int, default=32, help="batch size")
+    parser.add_argument("--train_epochs", type=int, default=20, help="train epochs")
+    parser.add_argument("--criterion", type=str, default="MSE", help="criterion name")
+
+    parser.add_argument("--patience", type=int, default=3, help="early stopping patience")
+    parser.add_argument("--delta", type=float, default=0.0, help="early stopping delta")
+    parser.add_argument("--learning_rate", type=float, default=1e-3, help="optimizer initial learning rate")  # add
+    parser.add_argument("--lradj", type=str, default="type1", help="adjust learning rate")  # add
+
     parser.add_argument("--look_back", type=int, default=5)
-    parser.add_argument("--dim", type=int, default=512)
+    parser.add_argument("--in_len", type=int, default=5, help="input MTS length (T)")  # change look_back -> in_len
+    parser.add_argument("--out_len", type=int, default=1, help="output MTS length (\tau)")  # out_len
+
+    parser.add_argument("--dim", type=int, default=256)
+    parser.add_argument("--d_model", type=int, default=256, help="dimension of hidden states (d_model)")  # change dim -> d_model
     parser.add_argument("--depth", type=int, default=3)
-    parser.add_argument("--heads", type=int, default=8)
-    parser.add_argument("--dim_head", type=int, default=64)
-    parser.add_argument("--fc_dim", type=int, default=2048)
-    parser.add_argument("--dropout", type=float, default=0.1)
-    parser.add_argument("--emb_dropout", type=float, default=0.1)
-    parser.add_argument("--debug", type=bool, default=False)
-    parser.add_argument("--model", type=str, default="BaseTransformer")
-    parser.add_argument("--criterion", type=str, default="MSE")
-    parser.add_argument("--patience", type=int, default=7)
-    parser.add_argument("--delta", type=float, default=1e-3)
+    parser.add_argument("--e_layers", type=int, default=3, help="num of encoder layers (N)")  # change depth -> e_layers
+    parser.add_argument("--dropout", type=float, default=0.1, help="dropout")
+
+    parser.add_argument("--heads", type=int, default=4)
+    parser.add_argument("--n_heads", type=int, default=4, help="num of heads")  # change heads -> n_heads
+    parser.add_argument("--dim_head", type=int, default=64)  # del dim_head: dim_head = d_model // n_heads
+    parser.add_argument("--fc_dim", type=int, default=512)
+    parser.add_argument("--d_ff", type=int, default=512, help="dimension of MLP in transformer")  # change fc_dim -> d_ff
+    parser.add_argument("--emb_dropout", type=float, default=0.1)  # del emb_dropout, change emb_dropout -> dropout
+
+    parser.add_argument("--seg_len", type=int, default=2, help="segment length (L_seg)")
+    parser.add_argument("--win_size", type=int, default=2, help="window size for segment merge")
+    parser.add_argument("--factor", type=int, default=10, help="num of routers in Cross-Dimension Stage of TSA (c)")
+
     args = parser.parse_args()
 
-    """mlflow"""
+    """ mlflow """
     mlflow.set_tracking_uri(CFG.MLFLOW_PATH)
     mlflow.set_experiment(args.e_name)
     mlflow.start_run()
+    mlflow.log_param("model", args.model)
+    mlflow.log_param("debug", args.debug)
     mlflow.log_param("seed", args.seed)
     mlflow.log_param("batch size", args.bs)
-    mlflow.log_param("look back", args.look_back)
-    mlflow.log_param("debug", args.debug)
-    mlflow.log_param("model", args.model)
     mlflow.log_param("criterion", args.criterion)
     mlflow.log_param("patience", args.patience)
     mlflow.log_param("delta", args.delta)
+    mlflow.log_param("look back", args.look_back)
     mlflow.log_param("dim", args.dim)
     mlflow.log_param("depth", args.depth)
     mlflow.log_param("dropout", args.dropout)
-    if "BaseTransformer" in args.model:
+    if "former" in args.model:
         mlflow.log_param("heads", args.heads)
         mlflow.log_param("dim_head", args.dim_head)
         mlflow.log_param("fc_dim", args.fc_dim)
         mlflow.log_param("emb_dropout", args.emb_dropout)
+        if "Crossformer" in args.model:
+            mlflow.log_param("seg_len", args.seg_len)
+            mlflow.log_param("win_size", args.win_size)
+            mlflow.log_param("factor", args.factor)
 
     """Prepare"""
     seed_everything(seed=args.seed)
-    data = load_data(CFG, look_back=args.look_back)
+    data = load_data(CFG, look_back=args.look_back, debug=args.debug)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=200)
-    train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
+    if not args.debug:
+        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=200)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
+    else:
+        train_index_list, test_index_list = train_test_split(np.arange(9), test_size=3)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=3)
 
     train_dataset, mean_list, std_list = create_dataset(CFG, data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(CFG, data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
@@ -73,7 +102,7 @@ def main():
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     early_stopping = EarlyStopping(patience=args.patience, delta=args.delta, verbose=True)
-    epoch_num = CFG.MAX_EPOCH if not args.debug else 3
+    epoch_num = args.train_epochs if not args.debug else 3
 
     # model = torch.compile(model)  # For PyTorch2.0
 
@@ -85,11 +114,15 @@ def main():
     print(f" -dim        : {args.dim}")
     print(f" -layer      : {args.depth}")
     print(f" -dropout    : {args.dropout}")
-    if "BaseTransformer" in args.model:
+    if "BaseTransformer" or "Crossformer" in args.model:
         print(f" -heads      : {args.heads}")
         print(f" -dim_head   : {args.dim_head}")
         print(f" -fc_dim     : {args.fc_dim}")
         print(f" -emb_dropout: {args.emb_dropout}")
+        if "Crossformer" in args.model:
+            print(f" -seg_len    : {args.seg_len}")
+            print(f" -win_size   : {args.win_size}")
+            print(f" -factor     : {args.factor}")
     print(f"Criterion   : {args.criterion}")
     print(f"Look Back   : {args.look_back}")
     print(f"Batch Size  : {args.bs}")
@@ -109,6 +142,8 @@ def main():
 
             # pred, _ = model(inp, spec, gt)  # Transformer
             pred, _ = model(inp, spec)  # train pred here
+
+            # print(inp.shape, spec.shape, gt.shape, pred.shape)
 
             loss = criterion(pred, gt)
             loss.backward()
@@ -141,8 +176,8 @@ def main():
 
         os.makedirs(CFG.RESULT_PATH, exist_ok=True)
         early_stopping(epoch_test_error, model, epoch)
-        # if early_stopping.early_stop:
-        #     break
+        if early_stopping.early_stop:
+            break
 
     train_end_time = time.perf_counter()
     train_time = datetime.timedelta(seconds=(train_end_time - train_start_time))
@@ -175,21 +210,14 @@ def main():
             for i in range(scaling_spec_data.shape[1]):  # spec scaling
                 scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
             for i in range(scaling_gt_data.shape[1]):  # ground truth scaling
-                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[
-                    i + CFG.NUM_CONTROL_FEATURES
-                ]
+                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
 
             attn_all = []
 
             start_time = time.perf_counter()
 
             for i in range(scaling_spec_data.shape[0]):
-                input = (
-                    torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32))
-                    .clone()
-                    .unsqueeze(0)
-                    .to(device)
-                )
+                input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 gt = torch.from_numpy(scaling_gt_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
 
@@ -219,24 +247,11 @@ def main():
 
             scaling_gt_data = np.zeros(np.array(gt_output_data).shape)
             for i in range(np.array(gt_output_data).shape[1]):  # scaling ground truth data for visualization
-                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[
-                    i + CFG.NUM_CONTROL_FEATURES
-                ]
+                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
 
             evaluation(gt_output_data, pred_data, output_feature_name, case_name)
-            visualization(
-                gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug
-            )
-            visualization(
-                scaling_gt_data,
-                scaling_pred_data,
-                output_feature_name,
-                output_feature_unit,
-                case_name,
-                CFG.RESULT_PATH,
-                args.debug,
-                is_normalized=True,
-            )
+            visualization(gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug)
+            visualization(scaling_gt_data, scaling_pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug, is_normalized=True)
             attention_visualization(args, attn_all, CFG.RESULT_PATH, case_name) if "BaseTransformer" in args.model else None
 
     save_evaluation(CFG.RESULT_PATH)
@@ -250,4 +265,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if os.path.isdir(CFG.RESULT_PATH):
+        shutil.rmtree(CFG.RESULT_PATH)
     main()
