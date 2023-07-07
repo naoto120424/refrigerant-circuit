@@ -26,11 +26,16 @@ def decimate(data):
 
 
 # Load All Data
-def load_data(cfg, look_back=20):
+def load_data(cfg, look_back=20, debug=False):
     print("Load Data")
     print("----------------------------------------------")
     csv_files = os.listdir(cfg.DATA_PATH)
     csv_files.sort()
+
+    if debug:
+        csv_files = csv_files[:9]
+
+    # print(len(csv_files), csv_files[-1])
 
     data = {}
     Xdata = []
@@ -39,8 +44,8 @@ def load_data(cfg, look_back=20):
 
     for file in tqdm(csv_files):
         csv_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
-        single_data = decimate(csv_data)[:, 1:]
-        # single_data = csv_data[:, 1:] # No decimate function
+        # single_data = decimate(csv_data)[:, 1:]
+        single_data = csv_data[:, 1:]  # No decimate function
         spec_data = single_data[:, : cfg.NUM_CONTROL_FEATURES]
         output_data = single_data[:, cfg.NUM_CONTROL_FEATURES :]
         input_time_list = []
