@@ -2,10 +2,12 @@ import torch
 from torch import nn
 import matplotlib.pyplot as plt
 import numpy as np
-import os, math
-
+import os
 from copy import deepcopy
 from einops import rearrange, repeat
+
+from model.BaseTransformer.encode import AgentEncoding, TimeEncoding
+from model.BaseTransformer.spec_embed import SpecEmbedding
 
 
 def pair(t):
@@ -19,57 +21,6 @@ def clones(module, n):
 
 
 # classes
-class AgentEncoding(nn.Module):
-    def __init__(self, d_model, look_back, max_len=5000):
-        super(AgentEncoding, self).__init__()
-        # Compute the positional encodings once in log space.
-        self.look_back = look_back
-        ae = torch.zeros(max_len, d_model).float()
-        ae.requires_grad = False
-
-        position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
-
-        ae[:, 0::2] = torch.sin(position * div_term)
-        ae[:, 1::2] = torch.cos(position * div_term)
-
-        ae = ae.unsqueeze(0)
-        self.register_buffer("ae", ae)
-
-    def forward(self, x):
-        # print(x.shape)
-        num_a = int(x.size(1) / self.look_back)
-        # print(num_a)
-        ae = self.ae[:, :num_a]
-        # print(ae.shape)
-        ae = ae.repeat_interleave(self.look_back, dim=1)
-        # print(ae.shape)
-        return ae[:, : x.size(1)]
-
-
-class TimeEncoding(nn.Module):
-    def __init__(self, d_model, look_back, max_len=5000):
-        super(TimeEncoding, self).__init__()
-        self.look_back = look_back
-        te = torch.zeros(max_len, d_model).float()
-        te.requires_grad = False
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
-        te[:, 0::2] = torch.sin(position * div_term)
-        te[:, 1::2] = torch.cos(position * div_term)
-        te = te.unsqueeze(0)
-        self.register_buffer("te", te)
-
-    def forward(self, x):
-        # print(x.shape)
-        te = self.te[:, : self.look_back]
-        num_a = int(x.size(1) / self.look_back)
-        # print(num_a)
-        te = te.repeat(1, num_a, 1)
-        # print(ae.shape)
-        return te[:, : x.size(1)]
-
-
 class InputEmbedding(nn.Module):
     def __init__(self, cfg, args):
         super(InputEmbedding, self).__init__()
@@ -88,13 +39,13 @@ class InputEmbedding(nn.Module):
     def forward(self, x):
         control = self.control_embedding(x[:, :, : self.num_control_features])
         # control += self.positional_embedding(control)
-        # print('control embedding: ', control.shape)
+        print("control embedding: ", control.shape)
         byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
         # byproduct += self.positional_embedding(byproduct)
-        # print('byproduct embedding: ', byproduct.shape)
+        print("byproduct embedding: ", byproduct.shape)
         target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
         # target += self.positional_embedding(target)
-        # print('target embedding: ', target.shape)
+        print("target embedding: ", target.shape)
 
         x = torch.cat([control, byproduct, target], dim=1)
         x += self.agent_encoding(x)
@@ -120,24 +71,6 @@ class InputEmbedding(nn.Module):
         """
 
         return x
-
-
-class SpecEmbedding(nn.Module):
-    def __init__(self, dim, num_control_features):
-        super().__init__()
-        self.spec_emb_list = clones(nn.Linear(1, dim), num_control_features)
-
-    def forward(self, spec):
-        spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
-        spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
-
-        for i, spec_embedding in enumerate(self.spec_emb_list):
-            if i == 0:
-                spec_emb_all = spec_embedding(spec[:, :, :, i])
-            else:
-                spec_emb_all = torch.cat((spec_emb_all, spec_embedding(spec[:, :, :, i])), dim=1)
-
-        return spec_emb_all
 
 
 class PreNorm(nn.Module):
@@ -258,7 +191,7 @@ class BaseTransformer(nn.Module):
         self.num_agent = 3
 
         self.input_embedding = InputEmbedding(cfg, args)
-        self.spec_embedding = SpecEmbedding(args.dim, self.num_control_features)
+        self.spec_embedding = SpecEmbedding(args.dim)
 
         self.dropout = nn.Dropout(args.emb_dropout)
 
@@ -277,4 +210,5 @@ class BaseTransformer(nn.Module):
         x, attn = self.transformer(x)
         x = x.mean(dim=1)
         x = self.generator(x)
+        # print(x.shape)
         return x, attn

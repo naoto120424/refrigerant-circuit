@@ -7,6 +7,8 @@ import os, math
 from copy import deepcopy
 from einops import rearrange, repeat
 
+from model.BaseTransformer.spec_embed import SpecEmbedding
+
 
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
@@ -46,24 +48,6 @@ class PositionalEmbedding(nn.Module):
         plt.savefig(f"img/inp_normal/encoding/time_encoding_input_norm_lookback{x.size(1)}.png")
         """
         return self.pe[:, : x.size(1)]
-
-
-class SpecEmbedding(nn.Module):
-    def __init__(self, dim, num_control_features):
-        super().__init__()
-        self.spec_emb_list = clones(nn.Linear(1, dim), num_control_features)
-
-    def forward(self, spec):
-        spec = torch.unsqueeze(spec, 1)  # bx9 -> bx1x9
-        spec = torch.unsqueeze(spec, 1)  # bx1x9 -> bx1x1x9
-
-        for i, spec_embedding in enumerate(self.spec_emb_list):
-            if i == 0:
-                spec_emb_all = spec_embedding(spec[:, :, :, i])
-            else:
-                spec_emb_all = torch.cat((spec_emb_all, spec_embedding(spec[:, :, :, i])), dim=1)
-
-        return spec_emb_all
 
 
 class PreNorm(nn.Module):
@@ -156,7 +140,7 @@ class BaseTransformer(nn.Module):
 
         self.input_embedding = nn.Linear(self.num_all_features, args.dim)
         self.positional_embedding = PositionalEmbedding(args.dim)  # 絶対位置エンコーディング
-        self.spec_embedding = SpecEmbedding(args.dim, self.num_control_features)
+        self.spec_embedding = SpecEmbedding(args.dim)
 
         self.dropout = nn.Dropout(args.emb_dropout)
 
