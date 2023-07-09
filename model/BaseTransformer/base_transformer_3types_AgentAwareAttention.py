@@ -8,6 +8,7 @@ from einops import rearrange, repeat
 
 from model.BaseTransformer.encode import AgentEncoding, TimeEncoding
 from model.BaseTransformer.spec_embed import SpecEmbedding
+from model.BaseTransformer.attn import AgentAwareAttention
 
 
 def pair(t):
@@ -39,13 +40,13 @@ class InputEmbedding(nn.Module):
     def forward(self, x):
         control = self.control_embedding(x[:, :, : self.num_control_features])
         # control += self.positional_embedding(control)
-        print("control embedding: ", control.shape)
+        # print("control embedding: ", control.shape)
         byproduct = self.byproduct_embedding(x[:, :, self.num_control_features : self.num_control_features + self.num_byproduct_features])
         # byproduct += self.positional_embedding(byproduct)
-        print("byproduct embedding: ", byproduct.shape)
+        # print("byproduct embedding: ", byproduct.shape)
         target = self.target_embedding(x[:, :, self.num_control_features + self.num_byproduct_features :])
         # target += self.positional_embedding(target)
-        print("target embedding: ", target.shape)
+        # print("target embedding: ", target.shape)
 
         x = torch.cat([control, byproduct, target], dim=1)
         x += self.agent_encoding(x)
@@ -96,62 +97,6 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-
-
-class AgentAwareAttention(nn.Module):
-    def __init__(self, args, num_agent=200, num_control_features=9):
-        super().__init__()
-        self.num_agent = num_agent
-        self.num_control_features = num_control_features
-        self.look_back = args.look_back
-        inner_dim = args.dim_head * args.heads
-        project_out = not (args.heads == 1 and args.dim_head == args.dim)
-
-        self.heads = args.heads
-        self.scale = args.dim_head**-0.5
-
-        self.attend = nn.Softmax(dim=-1)
-        self.to_qkv = nn.Linear(args.dim, inner_dim * 3, bias=False)
-        self.to_qk_self = nn.Linear(args.dim, inner_dim * 2, bias=False)
-
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, args.dim), nn.Dropout(args.dropout)) if project_out else nn.Identity()
-
-        attn_mask = torch.eye(self.num_agent)
-        attn_mask = attn_mask.repeat_interleave(self.look_back, dim=1)
-        attn_mask = attn_mask.repeat_interleave(self.look_back, dim=0)
-        attn_mask = torch.cat([attn_mask, torch.zeros(attn_mask.size(0), self.num_control_features)], dim=1)
-        attn_mask = torch.cat([attn_mask, torch.zeros(self.num_control_features, attn_mask.size(1))], dim=0)
-        self.attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
-
-        """
-        img_path = os.path.join("img", "inp_3types", "attention")
-        os.makedirs(img_path, exist_ok=True)
-        fig = plt.figure()
-        plt.imshow(attn_mask, cmap="Blues")
-        plt.colorbar()
-        plt.savefig(f"img/inp_3types/attention/attention_mask_input_3types_lookback{self.look_back}.png")
-        """
-
-    def forward(self, x):
-        qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
-
-        qk_self = self.to_qk_self(x).chunk(2, dim=-1)
-        q_self, k_self = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qk_self)
-
-        attn_mask = self.attn_mask
-        attn_mask = attn_mask.to(x.device)
-
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        dots_self = torch.matmul(q_self, k_self.transpose(-1, -2)) * self.scale
-        dots_all = attn_mask * dots_self + (1 - attn_mask) * dots
-
-        attn = self.attend(dots_all)
-
-        out = torch.matmul(attn, v)
-        out = rearrange(out, "b h n d -> b n (h d)")
-
-        return self.to_out(out), attn
 
 
 class Transformer(nn.Module):

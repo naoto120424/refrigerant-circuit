@@ -8,6 +8,7 @@ from copy import deepcopy
 from einops import rearrange, repeat
 
 from model.BaseTransformer.spec_embed import SpecEmbedding
+from model.BaseTransformer.attn import Attention
 
 
 def pair(t):
@@ -75,33 +76,6 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 
-class Attention(nn.Module):
-    def __init__(self, args):
-        super().__init__()
-        inner_dim = args.dim_head * args.heads
-        project_out = not (args.heads == 1 and args.dim_head == args.dim)
-
-        self.heads = args.heads
-        self.scale = args.dim_head**-0.5
-
-        self.attend = nn.Softmax(dim=-1)
-        self.to_qkv = nn.Linear(args.dim, inner_dim * 3, bias=False)
-
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, args.dim), nn.Dropout(args.dropout)) if project_out else nn.Identity()
-
-    def forward(self, x):
-        qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
-
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-
-        attn = self.attend(dots)
-
-        out = torch.matmul(attn, v)
-        out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out), attn
-
-
 class Transformer(nn.Module):
     def __init__(self, args):
         super().__init__()
@@ -143,8 +117,6 @@ class BaseTransformer(nn.Module):
         self.spec_embedding = SpecEmbedding(args.dim)
 
         self.dropout = nn.Dropout(args.emb_dropout)
-
-        self.spec_emb_list = clones(nn.Linear(1, args.dim), self.num_control_features)
 
         self.transformer = Transformer(args)
 

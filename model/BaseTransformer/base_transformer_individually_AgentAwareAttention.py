@@ -7,7 +7,6 @@ import os, math
 from copy import deepcopy
 from einops import rearrange, repeat
 
-from model.BaseTransformer.encode import AgentEncoding, TimeEncoding
 from model.BaseTransformer.spec_embed import SpecEmbedding
 from model.BaseTransformer.attn import AgentAwareAttention
 
@@ -23,6 +22,57 @@ def clones(module, n):
 
 
 # classes
+class AgentEncoding(nn.Module):
+    def __init__(self, d_model, look_back, max_len=5000):
+        super(AgentEncoding, self).__init__()
+        # Compute the positional encodings once in log space.
+        self.look_back = look_back
+        ae = torch.zeros(max_len, d_model).float()
+        ae.requires_grad = False
+
+        position = torch.arange(0, max_len).float().unsqueeze(1)
+        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
+
+        ae[:, 0::2] = torch.sin(position * div_term)
+        ae[:, 1::2] = torch.cos(position * div_term)
+
+        ae = ae.unsqueeze(0)
+        self.register_buffer("ae", ae)
+
+    def forward(self, x):
+        # print(x.shape)
+        num_a = int(x.size(1) / self.look_back)
+        # print(num_a)
+        ae = self.ae[:, :num_a]
+        # print(ae.shape)
+        ae = ae.repeat_interleave(self.look_back, dim=1)
+        # print(ae.shape)
+        return ae[:, : x.size(1)]
+
+
+class TimeEncoding(nn.Module):
+    def __init__(self, d_model, look_back, max_len=5000):
+        super(TimeEncoding, self).__init__()
+        self.look_back = look_back
+        te = torch.zeros(max_len, d_model).float()
+        te.requires_grad = False
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
+        te[:, 0::2] = torch.sin(position * div_term)
+        te[:, 1::2] = torch.cos(position * div_term)
+        te = te.unsqueeze(0)
+        self.register_buffer("te", te)
+
+    def forward(self, x):
+        # print(x.shape)
+        te = self.te[:, : self.look_back]
+        num_a = int(x.size(1) / self.look_back)
+        # print(num_a)
+        te = te.repeat(1, num_a, 1)
+        # print(ae.shape)
+        return te[:, : x.size(1)]
+
+
 class InputEmbedding(nn.Module):
     def __init__(self, cfg, args):
         super(InputEmbedding, self).__init__()
