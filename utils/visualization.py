@@ -76,14 +76,8 @@ def save_evaluation(result_path):
 
 
 # Make Graph
-def visualization(
-    gt_array, pred_array, output_feature_name, output_feature_unit, case_name, result_path, debug=False, is_normalized=False
-):
-    img_path = (
-        os.path.join(result_path, "img", "normalized", case_name)
-        if is_normalized
-        else os.path.join(result_path, "img", "original_scale", case_name)
-    )
+def visualization(gt_array, pred_array, output_feature_name, output_feature_unit, case_name, result_path, debug=False, is_normalized=False):
+    img_path = os.path.join(result_path, "img", "normalized", case_name) if is_normalized else os.path.join(result_path, "img", "original_scale", case_name)
     os.makedirs(img_path, exist_ok=True)
 
     for i in range(len(output_feature_name)):
@@ -112,12 +106,8 @@ def visualization(
         for i in range(grf_col):
             if (j * grf_col + i) < len(target_kW):
                 ax_list.append(fig.add_subplot(grf_row, grf_col, j * grf_col + i + 1))
-                ax_list[j * grf_col + i].plot(
-                    target_kW_visualization[target_kW[j * grf_col + i]]["gt"], color="#e46409", label="gt"
-                )
-                ax_list[j * grf_col + i].plot(
-                    target_kW_visualization[target_kW[j * grf_col + i]]["pred"], color="b", label="pred"
-                )
+                ax_list[j * grf_col + i].plot(target_kW_visualization[target_kW[j * grf_col + i]]["gt"], color="#e46409", label="gt")
+                ax_list[j * grf_col + i].plot(target_kW_visualization[target_kW[j * grf_col + i]]["pred"], color="b", label="pred")
                 ax_list[j * grf_col + i].set_xlabel(f"Time[s]")
                 ax_list[j * grf_col + i].set_ylabel(f"{target_kW[j * grf_col + i]}[{target_kW_unit[j * grf_col + i]}]")
                 ax_list[j * grf_col + i].legend(loc="best")
@@ -132,7 +122,7 @@ def attention_visualization(args, attn_all, result_path, case_name):
     for i in range(len(attn_all)):
         if i % 50 == 0:
             attn = attn_all[i]
-            for depth in range(args.depth):
+            for depth in range(args.e_layers):
                 img_path = os.path.join(result_path, "attention", case_name, str(i + 1))
                 os.makedirs(img_path, exist_ok=True)
                 """

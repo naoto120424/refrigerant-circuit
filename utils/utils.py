@@ -46,9 +46,6 @@ def seed_everything(seed=42):
 
 # model decide from model name
 def modelDecision(args, cfg):
-    # print(vars(cfg))
-    # print(args)
-
     if "LSTM" in args.model:
         if args.model == "LSTM":
             from model.lstm.lstm import LSTMClassifier
@@ -83,3 +80,12 @@ def modelDecision(args, cfg):
 
         return Crossformer(cfg, args)
     return None
+
+
+# change look_back -> in_len
+# change dim -> d_model
+# change depth -> e_layers
+# change heads -> n_heads
+# del dim_head: dim_head = d_model // n_heads
+# change fc_dim -> d_ff
+# del emb_dropout, change emb_dropout -> dropout

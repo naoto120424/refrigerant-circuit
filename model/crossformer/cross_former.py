@@ -41,13 +41,13 @@ class Crossformer(nn.Module):
     def __init__(self, cfg, args):
         super(Crossformer, self).__init__()
         self.data_dim = cfg.NUM_ALL_FEATURES
-        self.dim = args.dim
-        self.depth = args.depth
+        self.dim = args.d_model
+        self.depth = args.e_layers
         self.win_size = args.win_size
-        self.heads = args.heads
-        self.in_len = args.look_back
+        self.heads = args.n_heads
+        self.in_len = args.in_len
         self.out_len = 1
-        self.fc_dim = args.fc_dim
+        self.fc_dim = args.d_ff
         self.seg_len = args.seg_len
         self.merge_win = args.win_size
         self.dropout = args.dropout

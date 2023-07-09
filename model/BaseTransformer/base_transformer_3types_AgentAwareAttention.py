@@ -25,17 +25,17 @@ def clones(module, n):
 class InputEmbedding(nn.Module):
     def __init__(self, cfg, args):
         super(InputEmbedding, self).__init__()
-        self.look_back = args.look_back
+        self.in_len = args.in_len
         self.num_control_features = cfg.NUM_CONTROL_FEATURES
         self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
         self.num_target_features = cfg.NUM_TARGET_FEATURES
 
-        self.control_embedding = nn.Linear(self.num_control_features, args.dim)
-        self.byproduct_embedding = nn.Linear(self.num_byproduct_features, args.dim)
-        self.target_embedding = nn.Linear(self.num_target_features, args.dim)
+        self.control_embedding = nn.Linear(self.num_control_features, args.d_model)
+        self.byproduct_embedding = nn.Linear(self.num_byproduct_features, args.d_model)
+        self.target_embedding = nn.Linear(self.num_target_features, args.d_model)
 
-        self.agent_encoding = AgentEncoding(args.dim, self.look_back)
-        self.time_encoding = TimeEncoding(args.dim, self.look_back)
+        self.agent_encoding = AgentEncoding(args.d_model, self.in_len)
+        self.time_encoding = TimeEncoding(args.d_model, self.in_len)
 
     def forward(self, x):
         control = self.control_embedding(x[:, :, : self.num_control_features])
@@ -103,12 +103,12 @@ class Transformer(nn.Module):
     def __init__(self, args, num_agent, num_control_features):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for _ in range(args.depth):
+        for _ in range(args.e_layers):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(args.dim, AgentAwareAttention(args, num_agent, num_control_features)),
-                        PreNorm(args.dim, FeedForward(args.dim, args.fc_dim, dropout=args.dropout)),
+                        PreNorm(args.d_model, AgentAwareAttention(args, num_agent, num_control_features)),
+                        PreNorm(args.d_model, FeedForward(args.d_model, args.d_ff, dropout=args.dropout)),
                     ]
                 )
             )
@@ -136,13 +136,13 @@ class BaseTransformer(nn.Module):
         self.num_agent = 3
 
         self.input_embedding = InputEmbedding(cfg, args)
-        self.spec_embedding = SpecEmbedding(args.dim)
+        self.spec_embedding = SpecEmbedding(args.d_model)
 
-        self.dropout = nn.Dropout(args.emb_dropout)
+        self.dropout = nn.Dropout(args.dropout)
 
         self.transformer = Transformer(args, self.num_agent, self.num_control_features)
 
-        self.generator = nn.Sequential(nn.LayerNorm(args.dim), nn.Linear(args.dim, self.num_pred_features))
+        self.generator = nn.Sequential(nn.LayerNorm(args.d_model), nn.Linear(args.d_model, self.num_pred_features))
 
     def forward(self, input, spec):
         x = self.input_embedding(input)

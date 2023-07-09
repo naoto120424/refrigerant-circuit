@@ -26,7 +26,7 @@ def decimate(data):
 
 
 # Load All Data
-def load_data(cfg, look_back=20, debug=False):
+def load_data(cfg, in_len=20, debug=False):
     print("Load Data")
     print("----------------------------------------------")
     csv_files = os.listdir(cfg.DATA_PATH)
@@ -51,16 +51,16 @@ def load_data(cfg, look_back=20, debug=False):
         input_time_list = []
         spec_list = []
         gt_list = []
-        for t in range(single_data.shape[0] - look_back):  # data.shape[0]=1199
-            input_time_list.append(single_data[t : t + look_back])
-            spec_list.append(spec_data[t + look_back])
-            gt_list.append(output_data[t + look_back])
+        for t in range(single_data.shape[0] - in_len):  # data.shape[0]=1199
+            input_time_list.append(single_data[t : t + in_len])
+            spec_list.append(spec_data[t + in_len])
+            gt_list.append(output_data[t + in_len])
         Xdata.append(np.array(input_time_list))
         Specdata.append(np.array(spec_list))
         Ydata.append(np.array(gt_list))
-    data["inp"] = np.array(Xdata)  # shape(case_num, 1199-look_back, look_back, num_all_features)
-    data["spec"] = np.array(Specdata)  # shape(case_num, 1199-look_back, num_control_features)
-    data["gt"] = np.array(Ydata)  # shape(case_num, 1199-look_back, num_pred_features)
+    data["inp"] = np.array(Xdata)  # shape(case_num, 1199-in_len, in_len, num_all_features)
+    data["spec"] = np.array(Specdata)  # shape(case_num, 1199-in_len, num_control_features)
+    data["gt"] = np.array(Ydata)  # shape(case_num, 1199-in_len, num_pred_features)
     # print(data["inp"].shape)
     # print(data["spec"].shape)
     # print(data["gt"].shape)

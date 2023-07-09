@@ -76,12 +76,12 @@ class TimeEncoding(nn.Module):
 class InputEmbedding(nn.Module):
     def __init__(self, cfg, args):
         super(InputEmbedding, self).__init__()
-        self.look_back = args.look_back
+        self.in_len = args.in_len
 
-        self.linear = nn.Linear(1, args.dim)
+        self.linear = nn.Linear(1, args.d_model)
 
-        self.time_encoding = TimeEncoding(args.dim, self.look_back)
-        self.agent_encoding = AgentEncoding(args.dim, self.look_back)
+        self.time_encoding = TimeEncoding(args.d_model, self.in_len)
+        self.agent_encoding = AgentEncoding(args.d_model, self.in_len)
 
     def forward(self, x):
         batch, ts_len, ts_dim = x.shape
@@ -145,12 +145,12 @@ class Transformer(nn.Module):
     def __init__(self, args, num_agent, num_control_features):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for _ in range(args.depth):
+        for _ in range(args.e_layers):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(args.dim, AgentAwareAttention(args, num_agent, num_control_features)),
-                        PreNorm(args.dim, FeedForward(args.dim, args.fc_dim, dropout=args.dropout)),
+                        PreNorm(args.d_model, AgentAwareAttention(args, num_agent, num_control_features)),
+                        PreNorm(args.d_model, FeedForward(args.d_model, args.d_ff, dropout=args.dropout)),
                     ]
                 )
             )
@@ -178,13 +178,13 @@ class BaseTransformer(nn.Module):
         self.num_agent = self.num_all_features
 
         self.input_embedding = InputEmbedding(cfg, args)
-        self.spec_embedding = SpecEmbedding(args.dim)
+        self.spec_embedding = SpecEmbedding(args.d_model)
 
-        self.dropout = nn.Dropout(args.emb_dropout)
+        self.dropout = nn.Dropout(args.dropout)
 
         self.transformer = Transformer(args, self.num_agent, self.num_control_features)
 
-        self.generator = nn.Sequential(nn.LayerNorm(args.dim), nn.Linear(args.dim, self.num_pred_features))
+        self.generator = nn.Sequential(nn.LayerNorm(args.d_model), nn.Linear(args.d_model, self.num_pred_features))
 
     def forward(self, input, spec):
         x = self.input_embedding(input)

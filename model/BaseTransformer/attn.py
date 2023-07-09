@@ -7,7 +7,6 @@ class Attention(nn.Module):
     def __init__(self, args):
         super().__init__()
         self.head_dim = args.d_model // args.n_heads
-        # inner_dim = args.dim_head * args.heads
         project_out = not (args.n_heads == 1 and self.dim_head == args.d_model)
 
         self.n_heads = args.n_heads
@@ -36,7 +35,6 @@ class AgentAwareAttention(nn.Module):
         super().__init__()
         in_len = args.in_len
         self.head_dim = args.d_model // args.n_heads
-        # inner_dim = args.dim_head * args.heads
         project_out = not (args.n_heads == 1 and self.dim_head == args.d_model)
 
         self.n_heads = args.n_heads

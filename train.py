@@ -30,22 +30,15 @@ def main():
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="optimizer initial learning rate")  # add
     parser.add_argument("--lradj", type=str, default="type1", help="adjust learning rate")  # add
 
-    parser.add_argument("--look_back", type=int, default=5)
     parser.add_argument("--in_len", type=int, default=5, help="input MTS length (T)")  # change look_back -> in_len
-    parser.add_argument("--out_len", type=int, default=1, help="output MTS length (\tau)")  # out_len
+    parser.add_argument("--out_len", type=int, default=1, help="output MTS length (\tau)")  # add out_len
 
-    parser.add_argument("--dim", type=int, default=256)
     parser.add_argument("--d_model", type=int, default=256, help="dimension of hidden states (d_model)")  # change dim -> d_model
-    parser.add_argument("--depth", type=int, default=3)
     parser.add_argument("--e_layers", type=int, default=3, help="num of encoder layers (N)")  # change depth -> e_layers
     parser.add_argument("--dropout", type=float, default=0.1, help="dropout")
-
-    parser.add_argument("--heads", type=int, default=4)
     parser.add_argument("--n_heads", type=int, default=4, help="num of heads")  # change heads -> n_heads
     parser.add_argument("--dim_head", type=int, default=64)  # del dim_head: dim_head = d_model // n_heads
-    parser.add_argument("--fc_dim", type=int, default=512)
     parser.add_argument("--d_ff", type=int, default=512, help="dimension of MLP in transformer")  # change fc_dim -> d_ff
-    parser.add_argument("--emb_dropout", type=float, default=0.1)  # del emb_dropout, change emb_dropout -> dropout
 
     parser.add_argument("--seg_len", type=int, default=2, help="segment length (L_seg)")
     parser.add_argument("--win_size", type=int, default=2, help="window size for segment merge")
@@ -64,15 +57,13 @@ def main():
     mlflow.log_param("criterion", args.criterion)
     mlflow.log_param("patience", args.patience)
     mlflow.log_param("delta", args.delta)
-    mlflow.log_param("look back", args.look_back)
-    mlflow.log_param("dim", args.dim)
-    mlflow.log_param("depth", args.depth)
+    mlflow.log_param("in_len", args.in_len)
+    mlflow.log_param("d_model", args.d_model)
+    mlflow.log_param("e_layers", args.e_layers)
     mlflow.log_param("dropout", args.dropout)
     if "former" in args.model:
-        mlflow.log_param("heads", args.heads)
-        mlflow.log_param("dim_head", args.dim_head)
-        mlflow.log_param("fc_dim", args.fc_dim)
-        mlflow.log_param("emb_dropout", args.emb_dropout)
+        mlflow.log_param("heads", args.n_heads)
+        mlflow.log_param("d_ff", args.d_ff)
         if "Crossformer" in args.model:
             mlflow.log_param("seg_len", args.seg_len)
             mlflow.log_param("win_size", args.win_size)
@@ -80,12 +71,12 @@ def main():
 
     """Prepare"""
     seed_everything(seed=args.seed)
-    data = load_data(CFG, look_back=args.look_back, debug=args.debug)
+    data = load_data(CFG, in_len=args.in_len, debug=args.debug)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if not args.debug:
-        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=200)
-        train_index_list, val_index_list = train_test_split(train_index_list, test_size=100)
+        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=100)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=50)
     else:
         train_index_list, test_index_list = train_test_split(np.arange(9), test_size=3)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=3)
@@ -111,21 +102,19 @@ def main():
     print("----------------------------------------------")
     print(f"Device      : {str.upper(device)}")
     print(f"Model       : {args.model}")
-    print(f" -dim        : {args.dim}")
-    print(f" -layer      : {args.depth}")
+    print(f" -d_model    : {args.d_model}")
+    print(f" -e_layers   : {args.e_layers}")
     print(f" -dropout    : {args.dropout}")
     if "BaseTransformer" or "Crossformer" in args.model:
-        print(f" -heads      : {args.heads}")
-        print(f" -dim_head   : {args.dim_head}")
-        print(f" -fc_dim     : {args.fc_dim}")
-        print(f" -emb_dropout: {args.emb_dropout}")
+        print(f" -n_heads    : {args.n_heads}")
+        print(f" -d_ff       : {args.d_ff}")
         if "Crossformer" in args.model:
             print(f" -seg_len    : {args.seg_len}")
             print(f" -win_size   : {args.win_size}")
             print(f" -factor     : {args.factor}")
     print(f"Criterion   : {args.criterion}")
-    print(f"Look Back   : {args.look_back}")
-    print(f"Batch Size  : {args.bs}")
+    print(f"in_len      : {args.in_len}")
+    print(f"batch size  : {args.bs}")
     print(f"Train Case  : {len(train_index_list)}")
     print(f"Val Case    : {len(val_index_list)}")
     train_start_time = time.perf_counter()
@@ -193,7 +182,7 @@ def main():
         model.load_state_dict(torch.load(early_stopping.path))
         model.eval()
 
-        for test_index in tqdm(test_index_list):
+        for test_index in tqdm(train_index_list):  # 20230709 test_index_list -> train_index_list (訓練データでの予測でもうまくいかないのかを確認する)
             case_name = f"case{str(test_index+1).zfill(4)}"
 
             output_feature_name = data["feature_name"][CFG.NUM_CONTROL_FEATURES + 1 :]
@@ -217,7 +206,7 @@ def main():
             start_time = time.perf_counter()
 
             for i in range(scaling_spec_data.shape[0]):
-                input = torch.from_numpy(scaling_input_data[i : i + args.look_back].astype(np.float32)).clone().unsqueeze(0).to(device)
+                input = torch.from_numpy(scaling_input_data[i : i + args.in_len].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 gt = torch.from_numpy(scaling_gt_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
 

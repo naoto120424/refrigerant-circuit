@@ -51,25 +51,25 @@ class Transformer(nn.Module):
         self.num_target_features = cfg.NUM_TARGET_FEATURES
         self.num_all_features = cfg.NUM_ALL_FEATURES
 
-        self.input_embedding = nn.Linear(self.num_all_features, args.dim)
-        self.positional_embedding = PositionalEmbedding(args.dim)  # 絶対位置エンコーディング
+        self.input_embedding = nn.Linear(self.num_all_features, args.d_model)
+        self.positional_embedding = PositionalEmbedding(args.d_model)  # 絶対位置エンコーディング
 
-        self.gt_embedding = nn.Linear(self.num_pred_features, args.dim)
-        self.spec_embedding = SpecEmbedding(args.dim)
+        self.gt_embedding = nn.Linear(self.num_pred_features, args.d_model)
+        self.spec_embedding = SpecEmbedding(args.d_model)
 
-        self.dropout = nn.Dropout(args.emb_dropout)
+        self.dropout = nn.Dropout(args.dropout)
 
         self.transformer = nn.Transformer(
-            d_model=args.dim,
-            nhead=args.heads,
-            num_encoder_layers=args.depth,
-            num_decoder_layers=args.depth,
-            dim_feedforward=args.fc_dim,
+            d_model=args.d_model,
+            nhead=args.n_heads,
+            num_encoder_layers=args.e_layers,
+            num_decoder_layers=args.e_layers + 1,
+            dim_feedforward=args.d_ff,
             dropout=args.dropout,
             batch_first=True,
         )
 
-        self.generator = nn.Sequential(nn.LayerNorm(args.dim), nn.Linear(args.dim, self.num_pred_features))
+        self.generator = nn.Sequential(nn.LayerNorm(args.d_model), nn.Linear(args.d_model, self.num_pred_features))
 
     def forward(self, input, spec, gt):
         x = self.input_embedding(input)

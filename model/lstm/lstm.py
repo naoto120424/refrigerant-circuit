@@ -8,8 +8,8 @@ class LSTMClassifier(nn.Module):
         self.input_dim = cfg.NUM_ALL_FEATURES
         self.spec_dim = cfg.NUM_CONTROL_FEATURES
         self.output_dim = cfg.NUM_PRED_FEATURES
-        self.num_hidden_units = args.dim
-        self.num_layers = args.depth
+        self.num_hidden_units = args.d_model
+        self.num_layers = args.e_layers
         self.dropout = args.dropout
 
         self.lstm = nn.LSTM(
