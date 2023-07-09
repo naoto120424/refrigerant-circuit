@@ -25,6 +25,7 @@ model_list = {
     "BaseTransformer_individually_aete",
     "BaseTransformer_individually_AgentAwareAttention",
     "Transformer",
+    "Crossformer",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
