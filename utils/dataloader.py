@@ -44,8 +44,8 @@ def load_data(cfg, in_len=20, debug=False):
 
     for file in tqdm(csv_files):
         csv_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
-        single_data = decimate(csv_data)[:, 1:]
-        # single_data = csv_data[:, 1:]  # No decimate function
+        # single_data = decimate(csv_data)[:, 1:]
+        single_data = csv_data[:, 1:]  # No decimate function
         spec_data = single_data[:, : cfg.NUM_CONTROL_FEATURES]
         output_data = single_data[:, cfg.NUM_CONTROL_FEATURES :]
         input_time_list = []

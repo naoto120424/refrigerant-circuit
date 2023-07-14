@@ -4,7 +4,7 @@ import os, mlflow
 
 from sklearn.metrics import mean_absolute_error
 
-target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Chiller_kW", "Comp_OutP"]
+target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Chiller_kW"]  # "Comp_OutP"]
 target_kW_unit = ["kW", "kW", "kW", "kW", "MPa"]
 evaluation_list = ["ade", "fde", "mde", "pde"]
 
@@ -13,7 +13,7 @@ score_list_dict = {
     "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Chiller_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
-    "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
+    # "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
 
 target_kW_visualization = {
@@ -21,7 +21,7 @@ target_kW_visualization = {
     "Comp_kW": {"pred": [], "gt": []},
     "Eva_kW": {"pred": [], "gt": []},
     "Chiller_kW": {"pred": [], "gt": []},
-    "Comp_OutP": {"pred": [], "gt": []},
+    # "Comp_OutP": {"pred": [], "gt": []},
 }
 
 """
@@ -98,7 +98,7 @@ def visualization(gt_array, pred_array, output_feature_name, output_feature_unit
             target_kW_visualization[output_feature_name[i]]["gt"] = np.array(gt_array)[:, i]
 
     # For PowerPoint Slide
-    grf_row = 5
+    grf_row = 4
     grf_col = 1
     fig = plt.figure(figsize=(grf_col * 8, grf_row * 4))
     ax_list = []

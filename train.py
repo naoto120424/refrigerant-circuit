@@ -37,7 +37,6 @@ def main():
     parser.add_argument("--e_layers", type=int, default=3, help="num of encoder layers (N)")  # change depth -> e_layers
     parser.add_argument("--dropout", type=float, default=0.1, help="dropout")
     parser.add_argument("--n_heads", type=int, default=4, help="num of heads")  # change heads -> n_heads
-    parser.add_argument("--dim_head", type=int, default=64)  # del dim_head: dim_head = d_model // n_heads
     parser.add_argument("--d_ff", type=int, default=512, help="dimension of MLP in transformer")  # change fc_dim -> d_ff
 
     parser.add_argument("--seg_len", type=int, default=2, help="segment length (L_seg)")
@@ -182,7 +181,7 @@ def main():
         model.load_state_dict(torch.load(early_stopping.path))
         model.eval()
 
-        for test_index in tqdm(train_index_list):  # 20230709 test_index_list -> train_index_list (訓練データでの予測でもうまくいかないのかを確認する)
+        for test_index in tqdm(test_index_list):  # 20230709 test_index_list -> train_index_list (訓練データでの予測でもうまくいかないのかを確認する)
             case_name = f"case{str(test_index+1).zfill(4)}"
 
             output_feature_name = data["feature_name"][CFG.NUM_CONTROL_FEATURES + 1 :]

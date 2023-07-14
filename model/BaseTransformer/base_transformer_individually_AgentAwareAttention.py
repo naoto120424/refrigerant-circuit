@@ -8,71 +8,11 @@ from copy import deepcopy
 from einops import rearrange, repeat
 
 from model.BaseTransformer.spec_embed import SpecEmbedding
+from model.BaseTransformer.encode import AgentEncoding, TimeEncoding
 from model.BaseTransformer.attn import AgentAwareAttention
 
 
-def pair(t):
-    return t if isinstance(t, tuple) else (t, t)
-
-
-def clones(module, n):
-    # produce N identical layers.
-    assert isinstance(module, nn.Module)
-    return nn.ModuleList([deepcopy(module) for _ in range(n)])
-
-
 # classes
-class AgentEncoding(nn.Module):
-    def __init__(self, d_model, look_back, max_len=5000):
-        super(AgentEncoding, self).__init__()
-        # Compute the positional encodings once in log space.
-        self.look_back = look_back
-        ae = torch.zeros(max_len, d_model).float()
-        ae.requires_grad = False
-
-        position = torch.arange(0, max_len).float().unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
-
-        ae[:, 0::2] = torch.sin(position * div_term)
-        ae[:, 1::2] = torch.cos(position * div_term)
-
-        ae = ae.unsqueeze(0)
-        self.register_buffer("ae", ae)
-
-    def forward(self, x):
-        # print(x.shape)
-        num_a = int(x.size(1) / self.look_back)
-        # print(num_a)
-        ae = self.ae[:, :num_a]
-        # print(ae.shape)
-        ae = ae.repeat_interleave(self.look_back, dim=1)
-        # print(ae.shape)
-        return ae[:, : x.size(1)]
-
-
-class TimeEncoding(nn.Module):
-    def __init__(self, d_model, look_back, max_len=5000):
-        super(TimeEncoding, self).__init__()
-        self.look_back = look_back
-        te = torch.zeros(max_len, d_model).float()
-        te.requires_grad = False
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = (torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)).exp()
-        te[:, 0::2] = torch.sin(position * div_term)
-        te[:, 1::2] = torch.cos(position * div_term)
-        te = te.unsqueeze(0)
-        self.register_buffer("te", te)
-
-    def forward(self, x):
-        # print(x.shape)
-        te = self.te[:, : self.look_back]
-        num_a = int(x.size(1) / self.look_back)
-        # print(num_a)
-        te = te.repeat(1, num_a, 1)
-        # print(ae.shape)
-        return te[:, : x.size(1)]
-
-
 class InputEmbedding(nn.Module):
     def __init__(self, cfg, args):
         super(InputEmbedding, self).__init__()
@@ -182,9 +122,10 @@ class BaseTransformer(nn.Module):
 
         self.dropout = nn.Dropout(args.dropout)
 
-        self.transformer = Transformer(args, self.num_agent, self.num_control_features)
+        self.transformer = Transformer(args, self.num_agent, self.num_control_features)  # Transformer(args, self.num_agent, self.num_control_features)
 
         self.generator = nn.Sequential(nn.LayerNorm(args.d_model), nn.Linear(args.d_model, self.num_pred_features))
+        self.generator2 = nn.Sequential(nn.LayerNorm(args.in_len * self.num_agent + self.num_control_features), nn.Linear(args.in_len * self.num_agent + self.num_control_features, self.num_pred_features))
 
     def forward(self, input, spec):
         x = self.input_embedding(input)
@@ -195,6 +136,8 @@ class BaseTransformer(nn.Module):
 
         x = self.dropout(x)
         x, attn = self.transformer(x)
+
         x = x.mean(dim=1)
         x = self.generator(x)
+
         return x, attn

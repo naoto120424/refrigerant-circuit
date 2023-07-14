@@ -10,7 +10,6 @@ class CFG:
     NUM_BYPRODUCT_FEATURES = 37
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
-    MAX_EPOCH = 20
     DATA_PATH = os.path.join("..", "teacher")
     RESULT_PATH = os.path.join("..", "result")
     MLFLOW_PATH = os.path.join("..", "mlflow_experiment")
