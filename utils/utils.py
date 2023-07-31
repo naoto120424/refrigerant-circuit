@@ -40,7 +40,6 @@ def seed_everything(seed=42):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
-    torch.set_float32_matmul_precision("high")
 
 
 # model decide from model name
