@@ -21,6 +21,7 @@ model_list = {
     "BaseTransformer_sensor_first",
     "BaseTransformer_3types_aete",
     "BaseTransformer_3types_AgentAwareAttention",
+    "BaseTransformer_5types_AgentAwareAttention",
     "BaseTransformer_individually_aete",
     "BaseTransformer_individually_AgentAwareAttention",
     "Transformer",
@@ -59,6 +60,8 @@ def modelDecision(args, cfg):
             from model.BaseTransformer.base_transformer_3types_aete import BaseTransformer
         elif args.model == "BaseTransformer_3types_AgentAwareAttention":
             from model.BaseTransformer.base_transformer_3types_AgentAwareAttention import BaseTransformer
+        elif args.model == "BaseTransformer_5types_AgentAwareAttention":
+            from model.BaseTransformer.base_transformer_5types_AAA import BaseTransformer
         elif args.model == "BaseTransformer_individually_aete":
             from model.BaseTransformer.base_transformer_individually_aete import BaseTransformer
         elif args.model == "BaseTransformer_individually_AgentAwareAttention":
