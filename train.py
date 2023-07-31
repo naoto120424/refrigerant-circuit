@@ -77,8 +77,8 @@ def main():
         train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=100)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=50)
     else:
-        train_index_list, test_index_list = train_test_split(np.arange(9), test_size=3)
-        train_index_list, val_index_list = train_test_split(train_index_list, test_size=3)
+        train_index_list, test_index_list = train_test_split(np.arange(30), test_size=10)
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
 
     train_dataset, mean_list, std_list = create_dataset(CFG, data, train_index_list, is_train=True)
     val_dataset, _, _ = create_dataset(CFG, data, val_index_list, is_train=False, mean_list=mean_list, std_list=std_list)
@@ -130,8 +130,6 @@ def main():
 
             # pred, _ = model(inp, spec, gt)  # Transformer
             pred, _ = model(inp, spec)  # train pred here
-
-            # print(inp.shape, spec.shape, gt.shape, pred.shape)
 
             loss = criterion(pred, gt)
             loss.backward()

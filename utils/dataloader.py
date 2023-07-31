@@ -33,8 +33,7 @@ def load_data(cfg, in_len=20, debug=False):
     csv_files.sort()
 
     if debug:
-        csv_files = csv_files[:9]
-
+        csv_files = csv_files[:30]
     # print(len(csv_files), csv_files[-1])
 
     data = {}
@@ -44,8 +43,8 @@ def load_data(cfg, in_len=20, debug=False):
 
     for file in tqdm(csv_files):
         csv_data = pd.read_csv(os.path.join(cfg.DATA_PATH, file), skiprows=1).values
-        # single_data = decimate(csv_data)[:, 1:]
-        single_data = csv_data[:, 1:]  # No decimate function
+        single_data = decimate(csv_data)[:, 1:]
+        # single_data = csv_data[:, 1:]  # No decimate function
         spec_data = single_data[:, : cfg.NUM_CONTROL_FEATURES]
         output_data = single_data[:, cfg.NUM_CONTROL_FEATURES :]
         input_time_list = []
@@ -67,6 +66,7 @@ def load_data(cfg, in_len=20, debug=False):
 
     data["feature_name"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(cfg.DATA_PATH, csv_files[0]), skiprows=0).columns.values))
     data["feature_unit"] = list(map(lambda x: x.split(".")[0], pd.read_csv(os.path.join(cfg.DATA_PATH, csv_files[0]), skiprows=1).columns.values))
+    data["feature_name"][7] = "ChillerInT_spec"
 
     print("----------------------------------------------")
     return data

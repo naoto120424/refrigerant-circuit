@@ -4,7 +4,7 @@ import os, mlflow
 
 from sklearn.metrics import mean_absolute_error
 
-target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Chiller_kW"]  # "Comp_OutP"]
+target_kW = ["ACDS_kW", "Comp_kW", "Eva_kW", "Chiller_kW", "Comp_OutP"]
 target_kW_unit = ["kW", "kW", "kW", "kW", "MPa"]
 evaluation_list = ["ade", "fde", "mde", "pde"]
 
@@ -13,7 +13,7 @@ score_list_dict = {
     "Comp_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Eva_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
     "Chiller_kW": {"ade": [], "fde": [], "mde": [], "pde": []},
-    # "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
+    "Comp_OutP": {"ade": [], "fde": [], "mde": [], "pde": []},
 }
 
 target_kW_visualization = {
@@ -21,7 +21,7 @@ target_kW_visualization = {
     "Comp_kW": {"pred": [], "gt": []},
     "Eva_kW": {"pred": [], "gt": []},
     "Chiller_kW": {"pred": [], "gt": []},
-    # "Comp_OutP": {"pred": [], "gt": []},
+    "Comp_OutP": {"pred": [], "gt": []},
 }
 
 """
