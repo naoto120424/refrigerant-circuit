@@ -8,6 +8,7 @@
 /amp_train.py
 /step1_train.py
 /mcdropout_train.py
+/name_confirm.py
 /LD2011_2014.txt
 /tft.ipynb
 /tft_sample.ipynb
