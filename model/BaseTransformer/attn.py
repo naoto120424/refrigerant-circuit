@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
+import matplotlib.pyplot as plt
+import os
 
 
 class Attention(nn.Module):
@@ -33,7 +35,7 @@ class Attention(nn.Module):
 class AgentAwareAttention(nn.Module):
     def __init__(self, args, num_agent=200, num_control_features=9):
         super().__init__()
-        in_len = args.in_len
+        self.in_len = args.in_len
         self.head_dim = args.d_model // args.n_heads
         project_out = not (args.n_heads == 1 and self.dim_head == args.d_model)
 
@@ -47,19 +49,19 @@ class AgentAwareAttention(nn.Module):
         self.to_out = nn.Sequential(nn.Linear(self.head_dim, args.d_model), nn.Dropout(args.dropout)) if project_out else nn.Identity()
 
         attn_mask = torch.eye(num_agent)
-        attn_mask = attn_mask.repeat_interleave(in_len, dim=1)
-        attn_mask = attn_mask.repeat_interleave(in_len, dim=0)
+        attn_mask = attn_mask.repeat_interleave(self.in_len, dim=1)
+        attn_mask = attn_mask.repeat_interleave(self.in_len, dim=0)
         attn_mask = torch.cat([attn_mask, torch.zeros(attn_mask.size(0), num_control_features)], dim=1)
         attn_mask = torch.cat([attn_mask, torch.zeros(num_control_features, attn_mask.size(1))], dim=0)
         self.attn_mask = attn_mask.unsqueeze(0).unsqueeze(0)
 
         """
-        img_path = os.path.join("img", "inp_3types", "attention")
+        img_path = os.path.join("img", f"inp_{num_agent}types", "attention")
         os.makedirs(img_path, exist_ok=True)
         fig = plt.figure()
         plt.imshow(attn_mask, cmap="Blues")
         plt.colorbar()
-        plt.savefig(f"img/inp_3types/attention/attention_mask_input_3types_lookback{self.ts_len}.png")
+        plt.savefig(f"img/inp_{num_agent}types/attention/attention_mask_input_{num_agent}types_lookback{self.in_len}.png")
         """
 
     def forward(self, x):
