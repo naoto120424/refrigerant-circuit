@@ -33,13 +33,13 @@ target_kW_visualization = {
 
 
 # Calculate Evaluation
-def evaluation(gt_array, pred_array, output_feature_name, case_name):
+def evaluation(in_len, gt_array, pred_array, output_feature_name, case_name):
     for i in range(len(output_feature_name)):
         if output_feature_name[i] in target_kW:
-            ade = mean_absolute_error(np.array(gt_array)[:, i], np.array(pred_array)[:, i])
+            ade = mean_absolute_error(np.array(gt_array)[in_len:, i], np.array(pred_array)[in_len:, i])
             fde = abs(gt_array[-1][i] - pred_array[-1][i])
-            mde = max(abs(np.array(gt_array)[:, i] - np.array(pred_array)[:, i]))
-            pde = abs(max(abs(np.array(gt_array)[:, i])) - max(abs(np.array(pred_array)[:, i])))
+            mde = max(abs(np.array(gt_array)[in_len:, i] - np.array(pred_array)[in_len:, i]))
+            pde = abs(max(abs(np.array(gt_array)[in_len:, i])) - max(abs(np.array(pred_array)[in_len:, i])))
 
             score_list_dict[output_feature_name[i]]["ade"].append(ade)
             score_list_dict[output_feature_name[i]]["fde"].append(fde)

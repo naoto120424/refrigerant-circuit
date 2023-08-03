@@ -235,7 +235,7 @@ def main():
             for i in range(np.array(gt_output_data).shape[1]):  # scaling ground truth data for visualization
                 scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
 
-            evaluation(gt_output_data, pred_data, output_feature_name, case_name)
+            evaluation(args.in_len, gt_output_data, pred_data, output_feature_name, case_name)
             visualization(gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug)
             visualization(scaling_gt_data, scaling_pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug, is_normalized=True)
             attention_visualization(args, attn_all, CFG.RESULT_PATH, case_name) if "BaseTransformer" in args.model else None
