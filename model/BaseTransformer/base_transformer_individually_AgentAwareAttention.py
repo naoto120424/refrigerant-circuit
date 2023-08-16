@@ -110,7 +110,7 @@ class BaseTransformer(nn.Module):
     def __init__(self, cfg, args):
         super().__init__()
 
-        self.num_control_features = 4
+        self.num_control_features = 9
         self.num_pred_features = cfg.NUM_PRED_FEATURES
         self.num_byproduct_features = cfg.NUM_BYPRODUCT_FEATURES
         self.num_target_features = cfg.NUM_TARGET_FEATURES

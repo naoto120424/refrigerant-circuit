@@ -17,7 +17,6 @@ def main():
 
     parser.add_argument("--e_name", type=str, default="Mazda Refrigerant Circuit", help="experiment name")
     parser.add_argument("--model", type=str, default="BaseTransformer", help="model name")
-    parser.add_argument("--data_split", type=str, default="0.7,0.1,0.2", help="train/val/test split, can be ratio or number")
     parser.add_argument("--debug", type=bool, default=False, help="debug")
     parser.add_argument("--seed", type=int, default=42, help="seed")
 
@@ -30,16 +29,16 @@ def main():
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="optimizer initial learning rate")  # add
     parser.add_argument("--lradj", type=str, default="type1", help="adjust learning rate")  # add
 
-    parser.add_argument("--in_len", type=int, default=5, help="input MTS length (T)")  # change look_back -> in_len
+    parser.add_argument("--in_len", type=int, default=12, help="input MTS length (T)")  # change look_back -> in_len
     parser.add_argument("--out_len", type=int, default=1, help="output MTS length (\tau)")  # add out_len
 
     parser.add_argument("--d_model", type=int, default=256, help="dimension of hidden states (d_model)")  # change dim -> d_model
     parser.add_argument("--e_layers", type=int, default=3, help="num of encoder layers (N)")  # change depth -> e_layers
     parser.add_argument("--dropout", type=float, default=0.1, help="dropout")
-    parser.add_argument("--n_heads", type=int, default=4, help="num of heads")  # change heads -> n_heads
+    parser.add_argument("--n_heads", type=int, default=8, help="num of heads")  # change heads -> n_heads
     parser.add_argument("--d_ff", type=int, default=512, help="dimension of MLP in transformer")  # change fc_dim -> d_ff
 
-    parser.add_argument("--seg_len", type=int, default=2, help="segment length (L_seg)")
+    parser.add_argument("--seg_len", type=int, default=3, help="segment length (L_seg)")
     parser.add_argument("--win_size", type=int, default=2, help="window size for segment merge")
     parser.add_argument("--factor", type=int, default=10, help="num of routers in Cross-Dimension Stage of TSA (c)")
 
@@ -71,7 +70,7 @@ def main():
     """Prepare"""
     seed_everything(seed=args.seed)
     data = load_data(CFG, in_len=args.in_len, debug=args.debug)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = deviceDecision()
 
     if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=100)
@@ -87,9 +86,9 @@ def main():
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
 
     model = modelDecision(args, CFG)
-    criterion = criterion_list[args.criterion]
-
     model.to(device)
+
+    criterion = criterion_list[args.criterion]
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     early_stopping = EarlyStopping(patience=args.patience, delta=args.delta, verbose=True)
     epoch_num = args.train_epochs if not args.debug else 3
