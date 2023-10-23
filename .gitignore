@@ -40,4 +40,5 @@
 __pycache__
 
 train_multigpu.py
+baseline.ipynb
 utils/utils_multigpu.py
