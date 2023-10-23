@@ -27,6 +27,9 @@ model_list = {
     "BaseTransformer_individually_AgentAwareAttention",
     "Transformer",
     "Crossformer",
+    "Linear",
+    "DLinear",
+    "NLinear",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -91,6 +94,17 @@ def modelDecision(args, cfg):
             from model.crossformer.cross_former import Crossformer
 
         return Crossformer(cfg, args)
+
+    if "Linear" in args.model:
+        if args.model == "Linear":
+            from model.linear.linear import Model
+        elif args.model == "NLinear":
+            from model.linear.nlinear import Model
+        elif args.model == "DLinear":
+            from model.linear.dlinear import Model
+
+        return Model(cfg, args)
+
     return None
 
 
