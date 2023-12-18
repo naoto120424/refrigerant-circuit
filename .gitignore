@@ -12,7 +12,10 @@
 /LD2011_2014.txt
 /tft.ipynb
 /tft_sample.ipynb
+/Forecasting_Tutorial.ipynb
 /データセットに関する説明.txt
+/temp_df.csv
+/train.csv
 
 /50to50/
 /step1/
@@ -36,6 +39,11 @@
 /Nakato/
 /temporal_fusion_transformer_pytorch/
 /202303B4中直斗/
+/deeponet/
+/flow-forecast/
+/img/
+/model_save/
+/wandb/
 
 __pycache__
 
