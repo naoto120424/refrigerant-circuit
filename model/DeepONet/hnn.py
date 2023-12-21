@@ -6,8 +6,8 @@ import torch
 
 from .module import LossNN
 from .fnn import FNN
-from ..integrator.hamiltonian import SV
-from ..utils import lazy_property, grad
+from .integrator.hamiltonian import SV
+from .utils import lazy_property, grad
 
 class HNN(LossNN):
     '''Hamiltonian neural networks.

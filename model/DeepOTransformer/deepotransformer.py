@@ -33,16 +33,16 @@ class DeepONet(StructureNN):
         x_branch, x_trunk = x, spec  # x[..., :self.branch_dim], x[..., self.branch_dim:]
         x_branch = x_branch.permute(0, 2, 1)
         x_trunk = torch.unsqueeze(x_trunk, 1)
+        print(x_branch.shape, x_trunk.shape)
         x_branch = self.modus['Branch'](x_branch)
         for i in range(1, self.trunk_depth):
             x_trunk = self.modus['TrActM{}'.format(i)](self.modus['TrLinM{}'.format(i)](x_trunk))
-        x = torch.sum(x_branch * x_trunk, dim=-1, keepdim=True) + self.params['bias']
-        x = x.permute(0, 2, 1)[:, :, -41:]
-        return x, None
+        print(x_branch.shape, x_trunk.shape)
+        return torch.sum(x_branch * x_trunk, dim=-1, keepdim=True) + self.params['bias'], None
         
     def __init_modules(self):
         modules = nn.ModuleDict()
-        modules['Branch'] = FNN(self.branch_dim, self.width, self.num_all_features, self.branch_depth, self.width,
+        modules['Branch'] = FNN(self.branch_dim, self.pred_dim, self.num_all_features, self.branch_depth, self.width,
                                 self.activation, self.initializer)
         modules['TrLinM1'] = nn.Linear(self.trunk_dim, self.width)
         modules['TrActM1'] = self.Act

@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import random, os
+import random
+import os
 
 
 class CFG:
@@ -30,6 +31,7 @@ model_list = {
     "Linear",
     "DLinear",
     "NLinear",
+    "DeepONet",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -104,6 +106,11 @@ def modelDecision(args, cfg):
             from model.linear.dlinear import Model
 
         return Model(cfg, args)
+    
+    if "DeepONet" in  args.model:
+        from model.DeepONet.deeponet import DeepONet
+        
+        return DeepONet(args.in_len, cfg.NUM_CONTROL_FEATURES, cfg.NUM_PRED_FEATURES, cfg.NUM_ALL_FEATURES, width=args.d_model)
 
     return None
 

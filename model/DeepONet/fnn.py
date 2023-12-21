@@ -8,12 +8,13 @@ from .module import StructureNN
 class FNN(StructureNN):
     '''Fully connected neural networks.
     '''
-    def __init__(self, ind, outd, layers=2, width=50, activation='relu', initializer='default', softmax=False):
+    def __init__(self, ind, outd, num_all_features, layers=2, width=50, activation='relu', initializer='default', softmax=False):
         super(FNN, self).__init__()
         self.ind = ind
         self.outd = outd
         self.layers = layers
         self.width = width
+        self.num_all_features = num_all_features
         self.activation = activation
         self.initializer = initializer
         self.softmax = softmax
