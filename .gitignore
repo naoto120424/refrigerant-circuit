@@ -2,25 +2,18 @@
 /dataplot_onlyonedata.py
 /schedule.py
 /confirm.py
-/case0001.py
-/test.py
-/sasaguchi_train.py
 /amp_train.py
 /step1_train.py
 /mcdropout_train.py
 /name_confirm.py
-/LD2011_2014.txt
 /tft.ipynb
 /tft_sample.ipynb
 /Forecasting_Tutorial.ipynb
 /データセットに関する説明.txt
-/temp_df.csv
 /train.csv
 
 /50to50/
 /step1/
-/flow-forecast/
-/MCdropout/
 /MCdropout_step1/
 /MCdropout_step2/
 /data_plot/
@@ -29,21 +22,10 @@
 /data_plot_individually/
 /data_plot_individually_step2/
 /.vscode/
-/sasaguchi/
-/AgentFormer/
-/Crossformer/
-/tft_tf2/
-/__MACOSX
-/lightning_logs/
-/apex/
-/Nakato/
-/temporal_fusion_transformer_pytorch/
+/__MACOSX/
 /202303B4中直斗/
-/deeponet/
-/flow-forecast/
 /img/
 /model_save/
-/wandb/
 
 __pycache__
 
