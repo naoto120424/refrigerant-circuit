@@ -29,8 +29,8 @@ class DeepONet(StructureNN):
         self.params = self.__init_params()
         self.__initialize()
         
-    def forward(self, x, spec):
-        x_branch, x_trunk = x, spec  # x[..., :self.branch_dim], x[..., self.branch_dim:]
+    def forward(self, x, spec, gt):
+        x_branch, x_trunk = x, gt  # x[..., :self.branch_dim], x[..., self.branch_dim:]
         x_branch = x_branch.permute(0, 2, 1)
         x_trunk = torch.unsqueeze(x_trunk, 1)
         x_branch = self.modus['Branch'](x_branch)
