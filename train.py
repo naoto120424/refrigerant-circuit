@@ -4,11 +4,13 @@ import numpy as np
 import time, datetime, os
 import mlflow, shutil, argparse
 
-from utils.utils import *
-from utils.dataloader import *
-from utils.visualization import *
-from utils.earlystopping import EarlyStopping
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
+
+from utils.utils import CFG, criterion_list, predict_time_list, deviceDecision, seed_everything, modelDecision
+from utils.dataloader import load_data, create_dataset
+from utils.visualization import Eva, print_model_summary
+from utils.earlystopping import EarlyStopping
 
 
 def main():
@@ -22,25 +24,27 @@ def main():
 
     parser.add_argument("--bs", type=int, default=32, help="batch size")
     parser.add_argument("--train_epochs", type=int, default=20, help="train epochs")
-    parser.add_argument("--criterion", type=str, default="MSE", help="criterion name")
+    parser.add_argument("--criterion", type=str, default="MSE", help="criterion name. MSE / L1")
 
     parser.add_argument("--patience", type=int, default=3, help="early stopping patience")
     parser.add_argument("--delta", type=float, default=0.0, help="early stopping delta")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="optimizer initial learning rate")  # add
-    parser.add_argument("--lradj", type=str, default="type1", help="adjust learning rate")  # add
 
     parser.add_argument("--in_len", type=int, default=12, help="input MTS length (T)")  # change look_back -> in_len
     parser.add_argument("--out_len", type=int, default=1, help="output MTS length (\tau)")  # add out_len
 
-    parser.add_argument("--d_model", type=int, default=256, help="dimension of hidden states (d_model)")  # change dim -> d_model
     parser.add_argument("--e_layers", type=int, default=3, help="num of encoder layers (N)")  # change depth -> e_layers
-    parser.add_argument("--dropout", type=float, default=0.1, help="dropout")
-    parser.add_argument("--n_heads", type=int, default=8, help="num of heads")  # change heads -> n_heads
+    parser.add_argument("--d_model", type=int, default=256, help="dimension of hidden states (d_model)")  # change dim -> d_model
+    parser.add_argument("--dropout", type=float, default=0.1, help="dropout rate")
+    parser.add_argument("--n_heads", type=int, default=8, help="num of heads of multi-head Attention")  # change heads -> n_heads
     parser.add_argument("--d_ff", type=int, default=512, help="dimension of MLP in transformer")  # change fc_dim -> d_ff
 
-    parser.add_argument("--seg_len", type=int, default=3, help="segment length (L_seg)")
-    parser.add_argument("--win_size", type=int, default=2, help="window size for segment merge")
-    parser.add_argument("--factor", type=int, default=10, help="num of routers in Cross-Dimension Stage of TSA (c)")
+    parser.add_argument("--seg_len", type=int, default=3, help="(CrossFormer) segment length (L_seg)")
+    parser.add_argument("--win_size", type=int, default=2, help="(CrossFormer) window size for segment merge")
+    parser.add_argument("--factor", type=int, default=10, help="(CrossFormer) num of routers in Cross-Dimension Stage of TSA (c)")
+    
+    parser.add_argument("--trunk_layers", type=int, default=3, help="(DeepOx) num of Trunk Net Layers")
+    parser.add_argument("--trunk_d_model", type=int, default=256, help="(DeepOx) Trunk Net dimension")
 
     args = parser.parse_args()
 
@@ -59,24 +63,28 @@ def main():
     mlflow.log_param("d_model", args.d_model)
     mlflow.log_param("e_layers", args.e_layers)
     mlflow.log_param("dropout", args.dropout)
-    if "former" in args.model:
+    if ("BaseTransformer" in args.model) or ("Crossformer" in args.model) or ("DeepO" in args.model):
         mlflow.log_param("heads", args.n_heads)
         mlflow.log_param("d_ff", args.d_ff)
         if "Crossformer" in args.model:
             mlflow.log_param("seg_len", args.seg_len)
             mlflow.log_param("win_size", args.win_size)
             mlflow.log_param("factor", args.factor)
+        if "DeepO" in args.model:
+            mlflow.log_param("trunk layers", args.trunk_layers)
+            mlflow.log_param("trunk dim", args.trunk_d_model)
 
     """Prepare"""
     seed_everything(seed=args.seed)
     data = load_data(CFG, in_len=args.in_len, debug=args.debug)
+    eva = Eva(data)
     device = deviceDecision()
 
     if not args.debug:
         train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=100)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=50)
     else:
-        train_index_list, test_index_list = train_test_split(np.arange(30), test_size=10)
+        train_index_list, test_index_list = train_test_split(np.arange(25), test_size=5)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
 
     train_dataset, mean_list, std_list = create_dataset(CFG, data, train_index_list, is_train=True)
@@ -96,25 +104,7 @@ def main():
     # model = torch.compile(model)  # For PyTorch2.0
 
     """Train"""
-    print("\n\nTrain Start")
-    print("----------------------------------------------")
-    print(f"Device      : {str.upper(device)}")
-    print(f"Model       : {args.model}")
-    print(f"in_len      : {args.in_len}")
-    print(f" - d_model   : {args.d_model}")
-    print(f" - e_layers  : {args.e_layers}")
-    print(f" - dropout   : {args.dropout}")
-    if "BaseTransformer" or "Crossformer" in args.model:
-        print(f" - n_heads   : {args.n_heads}")
-        print(f" - d_ff      : {args.d_ff}")
-        if "Crossformer" in args.model:
-            print(f" - seg_len   : {args.seg_len}")
-            print(f" - win_size  : {args.win_size}")
-            print(f" - factor    : {args.factor}")
-    print(f"Criterion   : {args.criterion}")
-    print(f"Batch Size  : {args.bs}")
-    print(f"Train Case  : {len(train_index_list)}")
-    print(f"Val Case    : {len(val_index_list)}")
+    print_model_summary(args, device, len(train_index_list), len(val_index_list))
     train_start_time = time.perf_counter()
     for epoch in range(1, epoch_num + 1):
         print("----------------------------------------------")
@@ -126,9 +116,12 @@ def main():
             inp = batch["inp"].to(device)
             spec = batch["spec"].to(device)
             gt = batch["gt"].to(device)
-
-            # pred, _ = model(inp, spec, gt)  # Transformer
-            pred, _ = model(inp, spec)  # train pred here
+            timedata = batch["timedata"].to(device)
+            
+            if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet"):
+                pred, _ = model(inp, spec, timedata)  # Transformer, DeepOTransformer, DeepONet
+            else:
+                pred, _ = model(inp, spec)  # train pred here
 
             loss = criterion(pred, gt)
             loss.backward()
@@ -146,9 +139,12 @@ def main():
                 inp = batch["inp"].to(device)
                 spec = batch["spec"].to(device)
                 gt = batch["gt"].to(device)
+                timedata = batch["timedata"].to(device)
 
-                # pred, _ = model(inp, spec, gt)  # Transformer
-                pred, _ = model(inp, spec)  # validation pred here
+                if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet"):
+                    pred, _ = model(inp, spec, timedata)
+                else:
+                    pred, _ = model(inp, spec)  # validation pred here
 
                 test_error = torch.mean(torch.abs(gt - pred))
                 epoch_test_error += test_error.item() * inp.size(0)
@@ -186,16 +182,20 @@ def main():
             inp_data = data["inp"][test_index]
             spec_data = data["spec"][test_index]
             gt_data = data["gt"][test_index]
+            time_data = data["timedata"][test_index]
 
             scaling_input_data = inp_data[0].copy()
             scaling_spec_data = spec_data.copy()
             scaling_gt_data = gt_data.copy()
+            scaling_time_data = time_data.copy()
             for i in range(scaling_input_data.shape[1]):  # input scaling
-                scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i]) / std_list[i]
+                scaling_input_data[:, i] = (scaling_input_data[:, i] - mean_list[i+1]) / std_list[i+1]
             for i in range(scaling_spec_data.shape[1]):  # spec scaling
-                scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i]) / std_list[i]
+                scaling_spec_data[:, i] = (scaling_spec_data[:, i] - mean_list[i+1]) / std_list[i+1]
             for i in range(scaling_gt_data.shape[1]):  # ground truth scaling
-                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
+                scaling_gt_data[:, i] = (scaling_gt_data[:, i] - mean_list[i+CFG.NUM_CONTROL_FEATURES+1]) / std_list[i+CFG.NUM_CONTROL_FEATURES+1]
+            for i in range(scaling_time_data.shape[1]):
+                scaling_time_data[:, i] = (scaling_time_data[:, i] - mean_list[0]) / std_list[0]
 
             attn_all = []
 
@@ -205,8 +205,12 @@ def main():
                 input = torch.from_numpy(scaling_input_data[i : i + args.in_len].astype(np.float32)).clone().unsqueeze(0).to(device)
                 spec = torch.from_numpy(scaling_spec_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 gt = torch.from_numpy(scaling_gt_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
+                timedata = torch.from_numpy(scaling_time_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
 
-                scaling_pred_data, attn = model(input, spec)  # test pred here
+                if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet"):
+                    scaling_pred_data, attn = model(input, spec, timedata)  # test pred here
+                else:
+                    scaling_pred_data, attn = model(input, spec)  # test pred here
                 scaling_pred_data = scaling_pred_data.detach().to("cpu").numpy().copy()[0]
                 new_scaling_input_data = np.append(scaling_spec_data[i], scaling_pred_data)[np.newaxis, :]
                 scaling_input_data = np.concatenate([scaling_input_data, new_scaling_input_data], axis=0)
@@ -220,7 +224,7 @@ def main():
 
             pred_output_data = scaling_input_data.copy()
             for i in range(scaling_input_data.shape[1]):  # undo scaling
-                pred_output_data[:, i] = pred_output_data[:, i] * std_list[i] + mean_list[i]
+                pred_output_data[:, i] = pred_output_data[:, i] * std_list[i+1] + mean_list[i+1]
             pred_data = pred_output_data[:, CFG.NUM_CONTROL_FEATURES :]
             scaling_pred_data = scaling_input_data[:, CFG.NUM_CONTROL_FEATURES :]
 
@@ -232,14 +236,14 @@ def main():
 
             scaling_gt_data = np.zeros(np.array(gt_output_data).shape)
             for i in range(np.array(gt_output_data).shape[1]):  # scaling ground truth data for visualization
-                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i + CFG.NUM_CONTROL_FEATURES]) / std_list[i + CFG.NUM_CONTROL_FEATURES]
+                scaling_gt_data[:, i] = (np.array(gt_output_data)[:, i] - mean_list[i+CFG.NUM_CONTROL_FEATURES+1]) / std_list[i+CFG.NUM_CONTROL_FEATURES+1]
 
-            evaluation(args.in_len, gt_output_data, pred_data, output_feature_name, case_name)
-            visualization(gt_output_data, pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug)
-            visualization(scaling_gt_data, scaling_pred_data, output_feature_name, output_feature_unit, case_name, CFG.RESULT_PATH, args.debug, is_normalized=True)
-            attention_visualization(args, attn_all, CFG.RESULT_PATH, case_name) if "BaseTransformer" in args.model else None
+            eva.evaluation(args.in_len, gt_output_data, pred_data, case_name)
+            eva.visualization(gt_output_data, pred_data, case_name, CFG.RESULT_PATH)
+            eva.visualization(scaling_gt_data, scaling_pred_data, case_name, CFG.RESULT_PATH, is_normalized=True)
+            eva.attention_visualization(args, attn_all, CFG.RESULT_PATH, case_name) if "BaseTransformer" in args.model else None
 
-    save_evaluation(CFG.RESULT_PATH)
+    eva.save_evaluation(CFG.RESULT_PATH)
     mlflow.log_metric(f"predict time mean", np.mean(predict_time_list))
     mlflow.log_artifacts(local_dir=CFG.RESULT_PATH, artifact_path="result")
     shutil.rmtree(CFG.RESULT_PATH)

@@ -32,6 +32,7 @@ model_list = {
     "DLinear",
     "NLinear",
     "DeepONet",
+    "DeepOTransformer",
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -56,7 +57,6 @@ def seed_everything(seed=42):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
-    # torch.set_float32_matmul_precision("high")
 
 
 # model decide from model name
@@ -85,6 +85,11 @@ def modelDecision(args, cfg):
 
         return BaseTransformer(cfg, args)
 
+    if "DeepOTransformer" in args.model:
+        from model.DeepOTransformer.deepotransformer import DeepOTransformer
+        
+        return DeepOTransformer(cfg, args)
+
     if "Transformer" in args.model:
         if args.model == "Transformer":
             from model.Transformer.transformer import Transformer
@@ -109,7 +114,6 @@ def modelDecision(args, cfg):
     
     if "DeepONet" in  args.model:
         from model.DeepONet.deeponet import DeepONet
-        
         return DeepONet(args.in_len, cfg.NUM_CONTROL_FEATURES, cfg.NUM_PRED_FEATURES, cfg.NUM_ALL_FEATURES, width=args.d_model)
 
     return None
