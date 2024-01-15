@@ -31,8 +31,10 @@ model_list = {
     "Linear",
     "DLinear",
     "NLinear",
-    "DeepONet",
     "DeepOTransformer",
+    "DeepOLSTM",
+    "s4",
+    "s4d"
 }
 
 criterion_list = {"MSE": nn.MSELoss(), "L1": nn.L1Loss()}
@@ -61,12 +63,6 @@ def seed_everything(seed=42):
 
 # model decide from model name
 def modelDecision(args, cfg):
-    if "LSTM" in args.model:
-        if args.model == "LSTM":
-            from model.lstm.lstm import LSTMClassifier
-
-        return LSTMClassifier(cfg, args)
-
     if "BaseTransformer" in args.model:
         if args.model == "BaseTransformer":
             from model.BaseTransformer.base_transformer import BaseTransformer
@@ -85,21 +81,24 @@ def modelDecision(args, cfg):
 
         return BaseTransformer(cfg, args)
 
-    if "DeepOTransformer" in args.model:
-        from model.DeepOTransformer.deepotransformer import DeepOTransformer
+    if "Deep" in args.model:
+        if "DeepOTransformer" in args.model:
+            from model.DeepOTransformer.deepotransformer import DeepOTransformer
+            return DeepOTransformer(cfg, args)
         
-        return DeepOTransformer(cfg, args)
+        elif args.model == "DeepOLSTM":
+            from model.DeepOTransformer.deepolstm import DeepOLSTM
+            return DeepOLSTM(cfg, args)
+    
 
     if "Transformer" in args.model:
         if args.model == "Transformer":
             from model.Transformer.transformer import Transformer
-
         return Transformer(cfg, args)
 
     if "Crossformer" in args.model:
         if args.model == "Crossformer":
             from model.crossformer.cross_former import Crossformer
-
         return Crossformer(cfg, args)
 
     if "Linear" in args.model:
@@ -112,11 +111,22 @@ def modelDecision(args, cfg):
 
         return Model(cfg, args)
     
-    if "DeepONet" in  args.model:
-        from model.DeepONet.deeponet import DeepONet
-        return DeepONet(args.in_len, cfg.NUM_CONTROL_FEATURES, cfg.NUM_PRED_FEATURES, cfg.NUM_ALL_FEATURES, width=args.d_model)
+    if "LSTM" in args.model:
+        from model.lstm.lstm import LSTMClassifier
+        return LSTMClassifier(cfg, args)
+    
+    
+    if "s4" in args.model:
+        if args.model == "s4":
+            from model.s4.s4 import S4Block
+            return S4Block(args.d_model)
+    
+        elif args.d_model == "s4d":
+            from model.s4.s4d import S4D
+            return S4D(args.d_model)
 
     return None
+
 
 
 # change look_back -> in_len

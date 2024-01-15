@@ -56,7 +56,8 @@ def load_data(cfg, in_len=20, debug=False):
             input_time_list.append(single_data[t : t + in_len])
             spec_list.append(spec_data[t + in_len])
             gt_list.append(output_data[t + in_len])
-            t_list.append(np.arange(t+in_len+1, t+in_len+2, dtype=float))
+            t_list.append(np.arange(t+in_len+1, t+in_len+2, dtype=float)) # input 1 sec
+            # t_list.append(np.arange(t, t+in_len+1, dtype=float)) # input "in_len + 1" sec
         Xdata.append(np.array(input_time_list))
         Specdata.append(np.array(spec_list))
         Ydata.append(np.array(gt_list))

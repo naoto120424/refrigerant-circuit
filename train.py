@@ -118,7 +118,7 @@ def main():
             gt = batch["gt"].to(device)
             timedata = batch["timedata"].to(device)
             
-            if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet"):
+            if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet") or (args.model == "DeepOLSTM"):
                 pred, _ = model(inp, spec, timedata)  # Transformer, DeepOTransformer, DeepONet
             else:
                 pred, _ = model(inp, spec)  # train pred here
@@ -141,7 +141,7 @@ def main():
                 gt = batch["gt"].to(device)
                 timedata = batch["timedata"].to(device)
 
-                if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet"):
+                if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet") or (args.model == "DeepOLSTM"):
                     pred, _ = model(inp, spec, timedata)
                 else:
                     pred, _ = model(inp, spec)  # validation pred here
@@ -207,7 +207,7 @@ def main():
                 gt = torch.from_numpy(scaling_gt_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
                 timedata = torch.from_numpy(scaling_time_data[i].astype(np.float32)).clone().unsqueeze(0).to(device)
 
-                if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet"):
+                if (args.model == "Transformer") or (args.model == "DeepOTransformer") or (args.model == "DeepONet") or (args.model == "DeepOLSTM"):
                     scaling_pred_data, attn = model(input, spec, timedata)  # test pred here
                 else:
                     scaling_pred_data, attn = model(input, spec)  # test pred here
