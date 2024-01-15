@@ -172,12 +172,13 @@ class DeepOTransformer(nn.Module):
         x, attn = self.transformer(x)
         x = self.branch(x.permute(0, 2, 1)).permute(0, 2, 1)
         
-        for linear, relu in self.trunk:
-            timedata = linear(timedata)
-            timedata = relu(timedata)
-        y = self.trunk_dropout(timedata)
-        y = y.unsqueeze(1)
+        y = timedata.repeat(1, self.num_pred_features).unsqueeze(2)
         
+        for linear, relu in self.trunk:
+            y = linear(y)
+            y = relu(y)
+        
+        # print(f"x.shape: {x.shape}, y.shape: {y.shape}")
         x = torch.sum(x * y, dim=-1, keepdim=True)
         x = x.squeeze(2)
         
