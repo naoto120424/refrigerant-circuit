@@ -39,9 +39,7 @@ class S4DKernel(nn.Module):
         super().__init__()
         # Generate dt
         H = d_model
-        log_dt = torch.rand(H) * (
-            math.log(dt_max) - math.log(dt_min)
-        ) + math.log(dt_min)
+        log_dt = torch.rand(H) * (math.log(dt_max) - math.log(dt_min)) + math.log(dt_min)
 
         C = torch.randn(H, N // 2, dtype=torch.cfloat)
         self.C = nn.Parameter(torch.view_as_real(C))
@@ -56,7 +54,6 @@ class S4DKernel(nn.Module):
         """
         returns: (..., c, L) where c is number of channels (default 1)
         """
-
         # Materialize parameters
         dt = torch.exp(self.log_dt) # (H)
         C = torch.view_as_complex(self.C) # (H N)
@@ -87,8 +84,8 @@ class S4D(nn.Module):
     def __init__(self, d_model, d_state=64, dropout=0.0, transposed=False, **kernel_args):
         super().__init__()
 
-        self.h = d_model
-        self.n = d_state
+        self.h = 50# d_model
+        self.n = d_model# d_state
         self.d_output = self.h
         self.transposed = transposed
 
@@ -107,15 +104,16 @@ class S4D(nn.Module):
 
         # position-wise output transform to mix features
         self.output_linear = nn.Sequential(
-            nn.Conv1d(2*self.h, 2*self.h, kernel_size=1),
+            nn.Conv1d(self.h, 2*self.h, kernel_size=1),
             nn.GLU(dim=-2),
         )
+        
+        self.output = nn.Linear(self.h+self.n, 41)
 
     def forward(self, u, spec, **kwargs): # absorbs return_output and transformer src mask
         """ Input and output shape (B, H, L) """
         if not self.transposed: u = u.transpose(-1, -2)
         L = u.size(-1)
-        print(u.shape)
 
         # Compute SSM Kernel
         k = self.kernel(L=L) # (H L)
@@ -123,7 +121,7 @@ class S4D(nn.Module):
         # Convolution
         k_f = torch.fft.rfft(k, n=2*L) # (H L)
         u_f = torch.fft.rfft(u, n=2*L) # (B H L)
-        print(k_f.shape, u_f.shape)
+        print("k", k.shape, "u", u.shape, "k_f", k_f.shape, "u_f", u_f.shape)
         y = torch.fft.irfft(u_f*k_f, n=2*L)[..., :L] # (B H L)
 
         # Compute D term in state space equation - essentially a skip connection
@@ -133,8 +131,12 @@ class S4D(nn.Module):
         
         spec = self.spec_linear(spec)
         
-        y = torch.cat([y, spec], dim=1)
-        
         y = self.output_linear(y)
-        if not self.transposed: y = y.transpose(-1, -2)
+        print(y.shape)
+        # if not self.transposed: y = y.transpose(-1, -2)
+        y = y.mean(dim=-1)
+        print(y.shape)
+        y = torch.cat((y, spec), dim=1)
+        y = self.output(y)
+        
         return y, None # Return a dummy state to satisfy this repo's interface, but this can be modified
