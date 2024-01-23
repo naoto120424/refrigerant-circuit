@@ -11,6 +11,8 @@
 /Forecasting_Tutorial.ipynb
 /データセットに関する説明.txt
 /train.csv
+/data_concat.py
+/decimate_dates.csv
 
 /50to50/
 /step1/

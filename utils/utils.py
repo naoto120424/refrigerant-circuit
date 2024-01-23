@@ -12,7 +12,9 @@ class CFG:
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
     # DATA_PATH = "../../../../raid/n-naka/researchment/teacher/"
-    DATA_PATH = os.path.join("..", "teacher")
+    # DATA_PATH = os.path.join("..", "teacher")  # step2
+    DATA_PATH = os.path.join("..", "Refrig_Only")  # step3
+    # DATA_PATH = os.path.join("..", "Refrig_Cabin")  # step4
     RESULT_PATH = os.path.join("..", "result")
     MLFLOW_PATH = os.path.join("..", "mlflow_experiment")
 
@@ -117,13 +119,16 @@ def modelDecision(args, cfg):
     
     
     if "s4" in args.model:
-        if args.model == "s4":
+        if args.d_model == "s4d":
+            from model.s4.s4d import S4D
+            return S4D(args.d_model)
+        
+        
+        elif args.model == "s4":
             from model.s4.s4 import S4Block
             return S4Block(args.d_model)
     
-        elif args.d_model == "s4d":
-            from model.s4.s4d import S4D
-            return S4D(args.d_model)
+
 
     return None
 

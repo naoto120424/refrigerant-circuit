@@ -12,6 +12,7 @@ from utils.dataloader import load_data, create_dataset
 from utils.visualization import Eva, print_model_summary
 from utils.earlystopping import EarlyStopping
 
+from model.s4.s4d import S4D
 
 def main():
     """parser"""
@@ -77,12 +78,14 @@ def main():
     """Prepare"""
     seed_everything(seed=args.seed)
     data = load_data(CFG, in_len=args.in_len, debug=args.debug)
+    data_len = len(data["inp"])
     eva = Eva(data)
     device = deviceDecision()
 
+
     if not args.debug:
-        train_index_list, test_index_list = train_test_split(np.arange(len(data["inp"])), test_size=100)
-        train_index_list, val_index_list = train_test_split(train_index_list, test_size=50)
+        train_index_list, test_index_list = train_test_split(np.arange(data_len), test_size=int(data_len*0.2))
+        train_index_list, val_index_list = train_test_split(train_index_list, test_size=int(data_len*0.1))
     else:
         train_index_list, test_index_list = train_test_split(np.arange(25), test_size=5)
         train_index_list, val_index_list = train_test_split(train_index_list, test_size=10)
@@ -93,7 +96,8 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
 
-    model = modelDecision(args, CFG)
+    # model = modelDecision(args, CFG)
+    model = S4D(args.d_model)
     model.to(device)
 
     criterion = criterion_list[args.criterion]

@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import pandas as pd
 import os
+import glob
 
 from tqdm import tqdm
 from einops import rearrange
@@ -29,7 +30,7 @@ def decimate(data):
 def load_data(cfg, in_len=20, debug=False):
     print("Load Data")
     print("----------------------------------------------")
-    csv_files = os.listdir(cfg.DATA_PATH)
+    csv_files = glob.glob(os.path.join(cfg.DATA_PATH, "*.csv"))
     csv_files.sort()
 
     if debug:
