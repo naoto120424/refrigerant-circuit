@@ -84,8 +84,8 @@ class S4D(nn.Module):
     def __init__(self, d_model, d_state=64, dropout=0.0, transposed=False, **kernel_args):
         super().__init__()
 
-        self.h = 50# d_model
-        self.n = d_model# d_state
+        self.h = 50  # d_model
+        self.n = d_model  # d_state
         self.d_output = self.h
         self.transposed = transposed
 
@@ -121,7 +121,7 @@ class S4D(nn.Module):
         # Convolution
         k_f = torch.fft.rfft(k, n=2*L) # (H L)
         u_f = torch.fft.rfft(u, n=2*L) # (B H L)
-        print("k", k.shape, "u", u.shape, "k_f", k_f.shape, "u_f", u_f.shape)
+        # print("k", k.shape, "u", u.shape, "k_f", k_f.shape, "u_f", u_f.shape)
         y = torch.fft.irfft(u_f*k_f, n=2*L)[..., :L] # (B H L)
 
         # Compute D term in state space equation - essentially a skip connection
@@ -132,10 +132,10 @@ class S4D(nn.Module):
         spec = self.spec_linear(spec)
         
         y = self.output_linear(y)
-        print(y.shape)
+        # print(y.shape)
         # if not self.transposed: y = y.transpose(-1, -2)
         y = y.mean(dim=-1)
-        print(y.shape)
+        # print(y.shape)
         y = torch.cat((y, spec), dim=1)
         y = self.output(y)
         

@@ -1990,8 +1990,8 @@ class S4Block(nn.Module):
     def __init__(
         self,
         d_model,
-        bottleneck=None,
-        gate=None,
+        bottleneck=2,
+        gate=4,
         gate_act=None,
         mult_act=None,
         final_act="glu",
@@ -2005,8 +2005,9 @@ class S4Block(nn.Module):
     ):
         super().__init__()
 
-        self.d_model = d_model
+        self.d_model = 50 * bottleneck # d_model
         self.transposed = transposed
+        self.layer.d_output = self.d_model * gate
 
         self.gate = gate
         self.bottleneck = bottleneck
