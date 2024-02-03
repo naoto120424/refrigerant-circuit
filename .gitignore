@@ -13,6 +13,8 @@
 /train.csv
 /data_concat.py
 /decimate_dates.csv
+/train_al.py
+/test.png
 
 /50to50/
 /step1/
