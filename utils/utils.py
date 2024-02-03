@@ -12,8 +12,8 @@ class CFG:
     NUM_TARGET_FEATURES = 4
     NUM_ALL_FEATURES = 50
     # DATA_PATH = "../../../../raid/n-naka/researchment/teacher/"
-    # DATA_PATH = os.path.join("..", "teacher")  # step2
-    DATA_PATH = os.path.join("..", "Refrig_Only")  # step3
+    DATA_PATH = os.path.join("..", "teacher")  # step2
+    # DATA_PATH = os.path.join("..", "Refrig_Only")  # step3
     # DATA_PATH = os.path.join("..", "Refrig_Cabin")  # step4
     RESULT_PATH = os.path.join("..", "result")
     MLFLOW_PATH = os.path.join("..", "mlflow_experiment")
