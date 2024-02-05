@@ -96,8 +96,8 @@ def main():
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs, shuffle=True, num_workers=os.cpu_count())
 
-    # model = modelDecision(args, CFG)
-    model = S4D(args.d_model)
+    model = modelDecision(args, CFG)
+    # model = S4D(args.d_model)
     model.to(device)
 
     criterion = criterion_list[args.criterion]
